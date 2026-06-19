@@ -129,6 +129,30 @@ def init_db():
     conn.commit()
     conn.close()
 
+    # ── Migration: add page_type column if missing ──
+    _migrate_audit_history()
+
+
+def _migrate_audit_history():
+    """Add page_type column to audit_history if it doesn't exist."""
+    conn, db_type = _get_connection()
+    cursor = conn.cursor()
+    try:
+        if db_type == "pg":
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='audit_history' AND column_name='page_type'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE audit_history ADD COLUMN page_type TEXT DEFAULT 'generic'")
+        else:
+            cursor.execute("PRAGMA table_info(audit_history)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "page_type" not in columns:
+                cursor.execute("ALTER TABLE audit_history ADD COLUMN page_type TEXT DEFAULT 'generic'")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists or migration not needed
+    finally:
+        conn.close()
+
 
 # ──────────────────────────────────────────────
 # Keyword Tracking (DB-backed)
@@ -341,17 +365,18 @@ def db_save_audit(audit_result: dict):
     score = audit_result.get("score", 0)
     wc = audit_result.get("word_count", 0)
     issues_count = len(audit_result.get("issues", []))
+    page_type = audit_result.get("page_type", "generic")
     full_json = json.dumps(audit_result, ensure_ascii=False)
 
     if db_type == "pg":
         cursor.execute(
-            "INSERT INTO audit_history (url, score, word_count, issues_count, full_result) VALUES (%s, %s, %s, %s, %s)",
-            (url, score, wc, issues_count, full_json),
+            "INSERT INTO audit_history (url, score, word_count, issues_count, page_type, full_result) VALUES (%s, %s, %s, %s, %s, %s)",
+            (url, score, wc, issues_count, page_type, full_json),
         )
     else:
         cursor.execute(
-            "INSERT INTO audit_history (url, score, word_count, issues_count, full_result) VALUES (?, ?, ?, ?, ?)",
-            (url, score, wc, issues_count, full_json),
+            "INSERT INTO audit_history (url, score, word_count, issues_count, page_type, full_result) VALUES (?, ?, ?, ?, ?, ?)",
+            (url, score, wc, issues_count, page_type, full_json),
         )
     conn.commit()
     if db_type != "pg":
@@ -363,9 +388,9 @@ def db_get_audit_history(limit: int = 50) -> list[dict]:
     conn, db_type = _get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT url, score, word_count, issues_count, created_at FROM audit_history ORDER BY created_at DESC LIMIT ?"
+        "SELECT url, score, word_count, issues_count, page_type, created_at FROM audit_history ORDER BY created_at DESC LIMIT ?"
         if db_type == "sqlite"
-        else f"SELECT url, score, word_count, issues_count, created_at FROM audit_history ORDER BY created_at DESC LIMIT {limit}",
+        else f"SELECT url, score, word_count, issues_count, page_type, created_at FROM audit_history ORDER BY created_at DESC LIMIT {limit}",
         () if db_type == "pg" else (limit,),
     )
     results = [dict(row) for row in cursor.fetchall()]
