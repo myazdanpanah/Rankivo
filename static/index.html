@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rankivo — SEO AI Tools</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+/* ══════════════════════════════════════════════
+   CSS Variables & Theme
+   ══════════════════════════════════════════════ */
+:root {
+  --bg-primary: #f8f9fc;
+  --bg-secondary: #ffffff;
+  --bg-sidebar: #0f172a;
+  --bg-sidebar-hover: #1e293b;
+  --bg-sidebar-active: #334155;
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
+  --bg-code: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-sidebar: #cbd5e1;
+  --text-sidebar-active: #ffffff;
+  --border: #e2e8f0;
+  --border-focus: #6366f1;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-light: #eef2ff;
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: all 0.2s ease;
+  --sidebar-width: 260px;
+}
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-sidebar: #020617;
+  --bg-sidebar-hover: #0f172a;
+  --bg-sidebar-active: #1e293b;
+  --bg-card: #1e293b;
+  --bg-input: #334155;
+  --bg-code: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-sidebar: #94a3b8;
+  --text-sidebar-active: #ffffff;
+  --border: #334155;
+  --border-focus: #818cf8;
+  --accent: #818cf8;
+  --accent-hover: #6366f1;
+  --accent-light: #1e1b4b;
+  --success-bg: #052e16;
+  --warning-bg: #451a03;
+  --danger-bg: #450a0a;
+  --info-bg: #172554;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+}
+
+/* ══════════════════════════════════════════════
+   Reset & Base
+   ══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════════
+   Sidebar
+   ══════════════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  color: var(--text-sidebar);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+.sidebar-header {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+}
+.sidebar-logo .logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.sidebar-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding-left: 46px;
+}
+.sidebar-nav { padding: 12px 10px; flex: 1; }
+.nav-section {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 16px 10px 6px;
+  font-weight: 600;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  color: var(--text-sidebar);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 2px;
+}
+.nav-item:hover {
+  background: var(--bg-sidebar-hover);
+  color: var(--text-sidebar-active);
+}
+.nav-item.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.4);
+}
+.nav-item i { width: 18px; text-align: center; font-size: 0.95rem; }
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  border: none;
+  background: none;
+  color: var(--text-sidebar);
+  font-size: 0.85rem;
+  width: 100%;
+}
+.theme-toggle:hover { background: var(--bg-sidebar-hover); }
+
+/* ══════════════════════════════════════════════
+   Main Content
+   ══════════════════════════════════════════════ */
+.main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.status-badge.online { background: var(--success-bg); color: var(--success); }
+.status-badge.offline { background: var(--danger-bg); color: var(--danger); }
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.content { padding: 28px 32px; flex: 1; }
+
+/* ══════════════════════════════════════════════
+   Page Sections (tabs)
+   ══════════════════════════════════════════════ */
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ══════════════════════════════════════════════
+   Cards
+   ══════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+.card:hover { box-shadow: var(--shadow); }
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title i { color: var(--accent); }
+
+/* ══════════════════════════════════════════════
+   Metrics Row
+   ══════════════════════════════════════════════ */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+.metric-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.metric-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.metric-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.metric-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+.metric-icon.purple { background: var(--accent-light); color: var(--accent); }
+.metric-icon.green { background: var(--success-bg); color: var(--success); }
+.metric-icon.yellow { background: var(--warning-bg); color: var(--warning); }
+.metric-icon.red { background: var(--danger-bg); color: var(--danger); }
+.metric-icon.blue { background: var(--info-bg); color: var(--info); }
+
+/* ══════════════════════════════════════════════
+   Forms
+   ══════════════════════════════════════════════ */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: var(--transition);
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.form-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+/* ══════════════════════════════════════════════
+   Buttons
+   ══════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+}
+.btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 12px rgba(99,102,241,0.4); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+.btn-icon { padding: 8px 10px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ══════════════════════════════════════════════
+   Tables
+   ══════════════════════════════════════════════ */
+.table-wrapper { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th {
+  background: var(--bg-input);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg-input); }
+
+/* ══════════════════════════════════════════════
+   Badges & Tags
+   ══════════════════════════════════════════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-purple { background: var(--accent-light); color: var(--accent); }
+
+/* ══════════════════════════════════════════════
+   Score Circle
+   ══════════════════════════════════════════════ */
+.score-circle {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border: 4px solid;
+  margin: 0 auto;
+}
+.score-circle.excellent { border-color: var(--success); color: var(--success); }
+.score-circle.good { border-color: var(--warning); color: var(--warning); }
+.score-circle.poor { border-color: var(--danger); color: var(--danger); }
+.score-value { font-size: 2rem; line-height: 1; }
+.score-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+/* ══════════════════════════════════════════════
+   Issue List
+   ══════════════════════════════════════════════ */
+.issue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+.issue-item.critical { background: var(--danger-bg); }
+.issue-item.warning { background: var(--warning-bg); }
+.issue-item.info { background: var(--info-bg); }
+.issue-icon { font-size: 0.9rem; margin-top: 2px; flex-shrink: 0; }
+.issue-cat {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════
+   Expandable sections
+   ══════════════════════════════════════════════ */
+.expander {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.expander-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: var(--transition);
+  user-select: none;
+}
+.expander-header:hover { background: var(--bg-input); }
+.expander-header i.chevron { transition: transform 0.2s; }
+.expander-header.open i.chevron { transform: rotate(90deg); }
+.expander-body {
+  display: none;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+}
+.expander-body.open { display: block; }
+
+/* ══════════════════════════════════════════════
+   Markdown Rendered Content
+   ══════════════════════════════════════════════ */
+.markdown-content h1 { font-size: 1.5rem; margin: 16px 0 8px; }
+.markdown-content h2 { font-size: 1.25rem; margin: 14px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.markdown-content h3 { font-size: 1.1rem; margin: 12px 0 4px; }
+.markdown-content p { margin: 8px 0; }
+.markdown-content ul, .markdown-content ol { margin: 8px 0 8px 20px; }
+.markdown-content li { margin: 3px 0; }
+.markdown-content code {
+  background: var(--bg-code);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}
+.markdown-content pre {
+  background: var(--bg-code);
+  padding: 16px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.markdown-content pre code { padding: 0; background: none; }
+.markdown-content strong { font-weight: 600; }
+.markdown-content a { color: var(--accent); text-decoration: none; }
+.markdown-content a:hover { text-decoration: underline; }
+.markdown-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+/* ══════════════════════════════════════════════
+   Calendar Grid
+   ══════════════════════════════════════════════ */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.calendar-event {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  border-left: 4px solid var(--accent);
+  transition: var(--transition);
+}
+.calendar-event:hover { box-shadow: var(--shadow); }
+.calendar-event .event-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.calendar-event .event-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+.calendar-event .event-keyword {
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.calendar-event .event-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ══════════════════════════════════════════════
+   Loading Spinner
+   ══════════════════════════════════════════════ */
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+.spinner-dark {
+  border-color: rgba(0,0,0,0.1);
+  border-top-color: var(--accent);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.loading-overlay.active { display: flex; }
+.loading-box {
+  background: var(--bg-card);
+  padding: 32px 48px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* ══════════════════════════════════════════════
+   Toast Notifications
+   ══════════════════════════════════════════════ */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s ease, fadeOut 0.3s ease 3.7s;
+  max-width: 360px;
+}
+.toast.success { background: var(--success); color: #fff; }
+.toast.error { background: var(--danger); color: #fff; }
+.toast.info { background: var(--info); color: #fff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; transform: translateX(50px); } }
+
+/* ══════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; }
+  .main { margin-left: 0; }
+  .content { padding: 20px 16px; }
+  .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
+  .metrics-row { grid-template-columns: repeat(2, 1fr); }
+  .calendar-grid { grid-template-columns: 1fr; }
+}
+.mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 4px;
+}
+@media (max-width: 900px) {
+  .mobile-toggle { display: block; }
+}
+
+/* ══════════════════════════════════════════════
+   Empty State
+   ══════════════════════════════════════════════ */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+.empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+.empty-state p { font-size: 0.95rem; max-width: 400px; margin: 0 auto; }
+
+/* ══════════════════════════════════════════════
+   Chart containers
+   ══════════════════════════════════════════════ */
+.chart-container { position: relative; height: 300px; margin: 12px 0; }
+
+/* ══════════════════════════════════════════════
+   Scrollbar
+   ══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     Sidebar Navigation
+     ══════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="#" class="sidebar-logo" onclick="navigate('dashboard')">
+      <span class="logo-icon">🔍</span>
+      Rankivo
+    </a>
+    <div class="sidebar-subtitle">SEO AI Tools</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Overview</div>
+    <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+      <i class="fas fa-th-large"></i> Dashboard
+    </a>
+
+    <div class="nav-section">Research</div>
+    <a class="nav-item" data-page="keywords" onclick="navigate('keywords')">
+      <i class="fas fa-search"></i> Keyword Research
+    </a>
+    <a class="nav-item" data-page="clusters" onclick="navigate('clusters')">
+      <i class="fas fa-project-diagram"></i> Pillar-Cluster Map
+    </a>
+
+    <div class="nav-section">Content</div>
+    <a class="nav-item" data-page="articles" onclick="navigate('articles')">
+      <i class="fas fa-pen-fancy"></i> Article Generator
+    </a>
+    <a class="nav-item" data-page="calendar" onclick="navigate('calendar')">
+      <i class="fas fa-calendar-alt"></i> Content Calendar
+    </a>
+
+    <div class="nav-section">Analysis</div>
+    <a class="nav-item" data-page="audit" onclick="navigate('audit')">
+      <i class="fas fa-stethoscope"></i> SEO Audit
+    </a>
+    <a class="nav-item" data-page="batch" onclick="navigate('batch')">
+      <i class="fas fa-layer-group"></i> Batch Audit
+    </a>
+    <a class="nav-item" data-page="recommendations" onclick="navigate('recommendations')">
+      <i class="fas fa-lightbulb"></i> AI Recommendations
+    </a>
+
+    <div class="nav-section">Tracking</div>
+    <a class="nav-item" data-page="tracking" onclick="navigate('tracking')">
+      <i class="fas fa-chart-line"></i> Keyword Tracking
+    </a>
+    <a class="nav-item" data-page="history" onclick="navigate('history')">
+      <i class="fas fa-history"></i> Audit History
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <i class="fas fa-moon" id="themeIcon"></i>
+      <span id="themeLabel">Dark Mode</span>
+    </button>
+    <button class="theme-toggle" onclick="doLogout()" style="margin-top:4px;">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Sign Out</span>
+    </button>
+    <div style="margin-top:8px; font-size:0.7rem; color:var(--text-muted);">
+      Built with Python · Flask · Chart.js
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════
+     Main Content
+     ══════════════════════════════════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-title" id="pageTitle">Dashboard</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="status-badge online" id="statusBadge">
+        <span class="status-dot"></span>
+        <span id="statusText">Connected</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Dashboard
+         ═══════════════════════════════════════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="metrics-row" id="dashboardMetrics">
+        <div class="metric-card">
+          <div class="metric-icon purple"><i class="fas fa-search"></i></div>
+          <div class="metric-label">Keywords Found</div>
+          <div class="metric-value" id="dashKwCount">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon green"><i class="fas fa-project-diagram"></i></div>
+          <div class="metric-label">Clusters</div>
+          <div class="metric-value" id="dashClusterCount">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon blue"><i class="fas fa-stethoscope"></i></div>
+          <div class="metric-label">Audits Run</div>
+          <div class="metric-value" id="dashAuditCount">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon yellow"><i class="fas fa-calendar-check"></i></div>
+          <div class="metric-label">Calendar Events</div>
+          <div class="metric-value" id="dashCalCount">—</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-rocket"></i> Quick Actions</div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button class="btn btn-primary" onclick="navigate('keywords')" style="justify-content:center;">
+              <i class="fas fa-search"></i> Research Keywords
+            </button>
+            <button class="btn btn-primary" onclick="navigate('audit')" style="justify-content:center;">
+              <i class="fas fa-stethoscope"></i> Audit a URL
+            </button>
+            <button class="btn btn-secondary" onclick="navigate('articles')" style="justify-content:center;">
+              <i class="fas fa-pen-fancy"></i> Generate Article
+            </button>
+            <button class="btn btn-secondary" onclick="navigate('clusters')" style="justify-content:center;">
+              <i class="fas fa-project-diagram"></i> Build Clusters
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-info-circle"></i> System Status</div>
+          </div>
+          <div id="systemStatus">
+            <div style="padding:8px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
+              <span style="color:var(--text-secondary);">Database</span>
+              <span class="badge badge-success" id="dbStatus">SQLite</span>
+            </div>
+            <div style="padding:8px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
+              <span style="color:var(--text-secondary);">AI Provider</span>
+              <span class="badge badge-purple" id="aiStatus">—</span>
+            </div>
+            <div style="padding:8px 0; display:flex; justify-content:space-between;">
+              <span style="color:var(--text-secondary);">Default AI</span>
+              <span class="badge badge-info" id="defaultAi">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-chart-bar"></i> Audit History Overview</div>
+        </div>
+        <div class="chart-container" style="height:250px;">
+          <canvas id="dashHistoryChart"></canvas>
+        </div>
+        <div id="dashHistoryEmpty" class="empty-state" style="display:none; padding:24px;">
+          <i class="fas fa-chart-bar"></i>
+          <p>No audit history yet. Run an audit to see results here.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Keyword Research
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-keywords">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-search"></i> Keyword Research</div>
+          <button class="btn btn-sm btn-secondary" onclick="trackCurrentKeyword()" id="btnTrackKw" style="display:none;">
+            <i class="fas fa-thumbtack"></i> Track Keyword
+          </button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Seed Keyword</label>
+            <input type="text" class="form-input" id="kwSeed" placeholder="e.g. python web development" onkeydown="if(event.key==='Enter') runKeywordResearch()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Depth</label>
+            <input type="range" id="kwDepth" min="1" max="3" value="1" style="width:100%;margin-top:8px;" oninput="document.getElementById('kwDepthVal').textContent=this.value">
+            <span style="font-size:0.85rem;color:var(--text-muted);">Level: <span id="kwDepthVal">1</span></span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;cursor:pointer;">
+            <input type="checkbox" id="kwExpand" checked> Expand with modifiers
+          </label>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" onclick="runKeywordResearch()" id="btnResearch">
+            <i class="fas fa-rocket"></i> Start Research
+          </button>
+          <button class="btn btn-secondary" onclick="exportKeywordsCsv()" id="btnExportCsv" style="display:none;">
+            <i class="fas fa-file-csv"></i> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div id="kwResults" style="display:none;">
+        <div class="metrics-row" id="kwMetrics"></div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-chart-pie"></i> Intent Distribution</div>
+            </div>
+            <div class="chart-container" style="height:280px;">
+              <canvas id="kwIntentChart"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-list"></i> Autocomplete Suggestions</div>
+            </div>
+            <div id="kwSuggestions" style="max-height:300px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-question-circle"></i> People Also Ask</div>
+          </div>
+          <div id="kwPAA"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-link"></i> Related Searches</div>
+          </div>
+          <div id="kwRelated"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-globe"></i> SERP Results</div>
+          </div>
+          <div class="table-wrapper" id="kwSerpTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Pillar-Cluster Map
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-clusters">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-project-diagram"></i> Pillar-Cluster Map</div>
+        </div>
+        <div id="clusterNoData" class="empty-state">
+          <i class="fas fa-search"></i>
+          <p>Run keyword research first, then come back to build your cluster map.</p>
+          <button class="btn btn-primary" style="margin-top:16px;" onclick="navigate('keywords')">
+            <i class="fas fa-search"></i> Go to Keyword Research
+          </button>
+        </div>
+        <div id="clusterForm" style="display:none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Similarity Threshold</label>
+              <input type="range" id="clusterThreshold" min="0.15" max="0.60" step="0.05" value="0.30" style="width:100%;" oninput="document.getElementById('clusterThreshVal').textContent=this.value">
+              <span style="font-size:0.85rem;color:var(--text-muted);">Threshold: <span id="clusterThreshVal">0.30</span></span>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+              <button class="btn btn-primary" onclick="buildClusterMap()" id="btnBuildCluster">
+                <i class="fas fa-project-diagram"></i> Build Map
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="clusterResults" style="display:none;">
+        <div class="metrics-row" id="clusterMetrics"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-chart-bar"></i> Cluster Sizes</div>
+          </div>
+          <div class="chart-container" style="height:350px;">
+            <canvas id="clusterChart"></canvas>
+          </div>
+        </div>
+        <div id="clusterContentPlan"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Article Generator
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-articles">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-pen-fancy"></i> Article Generator</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Topic</label>
+            <input type="text" class="form-input" id="articleTopic" placeholder="How to use Python for SEO">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Keywords (one per line)</label>
+            <textarea class="form-textarea" id="articleKeywords" rows="3" placeholder="python seo&#10;seo tools&#10;keyword research"></textarea>
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">AI Provider</label>
+            <select class="form-select" id="articleProvider"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Word Count</label>
+            <input type="number" class="form-input" id="articleWordCount" value="1500" min="500" max="5000" step="100">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tone</label>
+            <select class="form-select" id="articleTone">
+              <option>informative, authoritative</option>
+              <option>casual, friendly</option>
+              <option>professional, technical</option>
+              <option>persuasive, marketing</option>
+              <option>educational, beginner-friendly</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Style</label>
+          <select class="form-select" id="articleStyle">
+            <option>blog post</option>
+            <option>guide</option>
+            <option>tutorial</option>
+            <option>listicle</option>
+            <option>case study</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="btn btn-primary" onclick="generateArticle()" id="btnGenArticle">
+            <i class="fas fa-pen-fancy"></i> Generate Article
+          </button>
+        </div>
+      </div>
+
+      <div id="articleResult" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-file-alt"></i> Generated Article</div>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" onclick="copyArticle()">
+                <i class="fas fa-copy"></i> Copy
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="downloadArticle()">
+                <i class="fas fa-download"></i> Download .md
+              </button>
+            </div>
+          </div>
+          <div class="markdown-content" id="articleContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: SEO Audit
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-audit">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-stethoscope"></i> SEO Audit</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">URL to Audit</label>
+            <input type="text" class="form-input" id="auditUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') runAudit()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Focus Keyword (optional)</label>
+            <input type="text" class="form-input" id="auditKeyword" placeholder="target keyword">
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="btn btn-primary" onclick="runAudit()" id="btnAudit">
+            <i class="fas fa-stethoscope"></i> Run Audit
+          </button>
+          <button class="btn btn-secondary" onclick="exportAuditPdf()" id="btnExportPdf" style="display:none;">
+            <i class="fas fa-file-pdf"></i> Export PDF
+          </button>
+        </div>
+      </div>
+
+      <div id="auditResults" style="display:none;"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Batch Audit
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-batch">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-layer-group"></i> Batch Audit</div>
+          <button class="btn btn-sm btn-secondary" onclick="downloadSampleCsv()">
+            <i class="fas fa-download"></i> Sample CSV
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Upload CSV (columns: url, keyword)</label>
+          <input type="file" class="form-input" id="batchFile" accept=".csv" onchange="handleBatchFile(event)">
+        </div>
+        <div id="batchFileInfo" style="display:none;margin-bottom:12px;"></div>
+        <button class="btn btn-primary" onclick="runBatchAudit()" id="btnBatch" disabled>
+          <i class="fas fa-play"></i> Run Batch Audit
+        </button>
+      </div>
+
+      <div id="batchResults" style="display:none;"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: AI Recommendations
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-recommendations">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-lightbulb"></i> AI SEO Recommendations</div>
+        </div>
+        <div id="recNoAudit" class="empty-state">
+          <i class="fas fa-stethoscope"></i>
+          <p>Run an SEO audit first to get AI-powered recommendations.</p>
+          <button class="btn btn-primary" style="margin-top:16px;" onclick="navigate('audit')">
+            <i class="fas fa-stethoscope"></i> Go to SEO Audit
+          </button>
+        </div>
+        <div id="recContent" style="display:none;">
+          <div id="recAuditInfo" style="margin-bottom:16px;"></div>
+
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div class="card-title" style="color:var(--success);"><i class="fas fa-bolt"></i> Quick Wins</div>
+            </div>
+            <div id="quickWins"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-robot"></i> AI-Powered Analysis</div>
+              <button class="btn btn-primary btn-sm" onclick="generateRecommendations()" id="btnRecs">
+                <i class="fas fa-robot"></i> Generate AI Recommendations
+              </button>
+            </div>
+            <div id="aiRecs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Keyword Tracking
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-tracking">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-chart-line"></i> Keyword Tracking</div>
+        </div>
+        <div id="trackedList"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Content Calendar
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-calendar">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-calendar-alt"></i> Content Calendar</div>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-secondary" onclick="generateCalendar()" id="btnGenCal">
+              <i class="fas fa-magic"></i> Generate from Clusters
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="exportCalendar('markdown')">
+              <i class="fas fa-download"></i> Export MD
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="exportCalendar('json')">
+              <i class="fas fa-download"></i> Export JSON
+            </button>
+          </div>
+        </div>
+        <div id="calMetrics" style="margin-bottom:16px;"></div>
+        <div id="calGrid" class="calendar-grid"></div>
+        <div id="calEmpty" class="empty-state" style="display:none;">
+          <i class="fas fa-calendar-plus"></i>
+          <p>Build a pillar-cluster map first, then generate your content calendar.</p>
+          <button class="btn btn-primary" style="margin-top:16px;" onclick="navigate('clusters')">
+            <i class="fas fa-project-diagram"></i> Go to Clusters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE: Audit History
+         ═══════════════════════════════════════════ -->
+    <div class="page" id="page-history">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-history"></i> Audit History</div>
+        </div>
+        <div class="table-wrapper" id="historyTable"></div>
+        <div id="historyEmpty" class="empty-state" style="display:none;">
+          <i class="fas fa-history"></i>
+          <p>No audit history yet. Run an SEO audit to start tracking.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner spinner-dark"></div>
+    <span id="loadingText">Working...</span>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Login Overlay -->
+<div id="loginOverlay" style="display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:500;display:flex;align-items:center;justify-content:center;">
+  <div class="card" style="width:400px;max-width:90vw;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:8px;">🔍</div>
+    <h2 style="margin-bottom:4px;">Rankivo</h2>
+    <p style="color:var(--text-muted);margin-bottom:24px;font-size:0.9rem;">Sign in to access SEO AI Tools</p>
+    <div class="form-group" style="text-align:left;">
+      <label class="form-label">Username</label>
+      <input type="text" class="form-input" id="loginUsername" placeholder="admin" autofocus>
+    </div>
+    <div class="form-group" style="text-align:left;">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-input" id="loginPassword" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;" onclick="doLogin()">
+      <i class="fas fa-sign-in-alt"></i> Sign In
+    </button>
+    <div id="loginError" style="color:var(--danger);font-size:0.85rem;margin-top:12px;display:none;"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   State
+   ══════════════════════════════════════════════ */
+const API = '';
+let sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+let authToken = localStorage.getItem('rankivo_token') || '';
+let authUser = localStorage.getItem('rankivo_user') || '';
+let currentPage = 'dashboard';
+let state = {
+  keywordData: null,
+  clusterMap: null,
+  auditResult: null,
+  generatedArticle: '',
+  articleTopic: '',
+  batchCsv: '',
+};
+
+/* ══════════════════════════════════════════════
+   Auth
+   ══════════════════════════════════════════════ */
+async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!username || !password) { showLoginError('Enter username and password'); return; }
+  try {
+    const res = await fetch(API + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      authToken = data.token;
+      authUser = data.username;
+      localStorage.setItem('rankivo_token', authToken);
+      localStorage.setItem('rankivo_user', authUser);
+      hideLoginScreen();
+      loadDashboard();
+    } else {
+      showLoginError(data.error || 'Login failed');
+    }
+  } catch(e) { showLoginError('Connection failed'); }
+}
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+async function doLogout() {
+  try { await fetch(API + '/api/auth/logout', { method: 'POST', headers: authHeaders() }); } catch(e) {}
+  authToken = '';
+  authUser = '';
+  localStorage.removeItem('rankivo_token');
+  localStorage.removeItem('rankivo_user');
+  showLoginScreen();
+}
+function showLoginScreen() {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.style.display = 'flex';
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.main').style.display = 'none';
+}
+function hideLoginScreen() {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.style.display = 'none';
+  document.querySelector('.sidebar').style.display = '';
+  document.querySelector('.main').style.display = '';
+}
+function authHeaders() { return authToken ? { 'Authorization': 'Bearer ' + authToken } : {}; }
+async function checkAuth() {
+  if (!authToken) { showLoginScreen(); return false; }
+  try {
+    const res = await fetch(API + '/api/auth/check', { headers: authHeaders() });
+    const data = await res.json();
+    if (data.authenticated) { hideLoginScreen(); return true; }
+    showLoginScreen(); return false;
+  } catch(e) { showLoginScreen(); return false; }
+}
+
+/* ══════════════════════════════════════════════
+   Utilities
+   ══════════════════════════════════════════════ */
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', 'X-Session-ID': sessionId, ...authHeaders(), ...opts.headers };
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401) { showLoginScreen(); return { error: 'Session expired' }; }
+  return res.json();
+}
+
+function showLoading(text = 'Working...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ══════════════════════════════════════════════
+   Navigation
+   ══════════════════════════════════════════════ */
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + page);
+  const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (pageEl) pageEl.classList.add('active');
+  if (navEl) navEl.classList.add('active');
+
+  const titles = {
+    dashboard: 'Dashboard', keywords: 'Keyword Research', clusters: 'Pillar-Cluster Map',
+    articles: 'Article Generator', calendar: 'Content Calendar', audit: 'SEO Audit',
+    batch: 'Batch Audit', recommendations: 'AI Recommendations',
+    tracking: 'Keyword Tracking', history: 'Audit History'
+  };
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+
+  // Load page-specific data
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'history') loadAuditHistory();
+  if (page === 'tracking') loadTracking();
+  if (page === 'calendar') loadCalendar();
+  if (page === 'recommendations') loadRecommendations();
+  if (page === 'clusters') updateClusterForm();
+  if (page === 'articles') loadProviders();
+
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+/* ══════════════════════════════════════════════
+   Theme
+   ══════════════════════════════════════════════ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeIcon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+  document.getElementById('themeLabel').textContent = isDark ? 'Dark Mode' : 'Light Mode';
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('themeIcon').className = 'fas fa-sun';
+    document.getElementById('themeLabel').textContent = 'Light Mode';
+  }
+})();
+
+/* ══════════════════════════════════════════════
+   Dashboard
+   ══════════════════════════════════════════════ */
+async function loadDashboard() {
+  try {
+    const status = await api('/api/status');
+    document.getElementById('dbStatus').textContent = status.database;
+    document.getElementById('aiStatus').textContent = status.providers.length ? status.providers.join(', ') : 'None';
+    document.getElementById('defaultAi').textContent = status.default_provider;
+
+    const badge = document.getElementById('statusBadge');
+    badge.className = 'status-badge ' + (status.providers.length ? 'online' : 'offline');
+    document.getElementById('statusText').textContent = status.providers.length ? 'Connected' : 'No AI';
+
+    // Audit history chart
+    const hist = await api('/api/audit-history?limit=20');
+    if (hist.history && hist.history.length) {
+      document.getElementById('dashAuditCount').textContent = hist.history.length;
+      document.getElementById('dashHistoryEmpty').style.display = 'none';
+      renderDashHistoryChart(hist.history);
+    } else {
+      document.getElementById('dashHistoryEmpty').style.display = 'block';
+      document.getElementById('dashAuditCount').textContent = '0';
+    }
+
+    // Calendar count
+    const cal = await api('/api/calendar');
+    document.getElementById('dashCalCount').textContent = cal.events ? cal.events.length : '0';
+
+    // Keyword/cluster from session
+    if (state.keywordData) {
+      const allKw = new Set();
+      ['suggestions','modifier_expanded','related_searches','people_also_ask'].forEach(k => {
+        (state.keywordData[k] || []).forEach(w => allKw.add(w));
+      });
+      document.getElementById('dashKwCount').textContent = allKw.size;
+    }
+    if (state.clusterMap) {
+      document.getElementById('dashClusterCount').textContent = state.clusterMap.stats.total_clusters;
+    }
+  } catch(e) { console.error('Dashboard load error:', e); }
+}
+
+let dashChart = null;
+function renderDashHistoryChart(history) {
+  const ctx = document.getElementById('dashHistoryChart');
+  if (dashChart) dashChart.destroy();
+  const labels = history.slice(0, 10).reverse().map(h => { try { return new URL(h.url).hostname; } catch { return h.url.substring(0,20); } });
+  const scores = history.slice(0, 10).reverse().map(h => h.score);
+  dashChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'SEO Score',
+        data: scores,
+        backgroundColor: scores.map(s => s >= 80 ? '#10b981' : s >= 50 ? '#f59e0b' : '#ef4444'),
+        borderRadius: 6,
+        barPercentage: 0.6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.06)' } },
+        x: { grid: { display: false }, ticks: { maxRotation: 45 } }
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   Keyword Research
+   ══════════════════════════════════════════════ */
+async function runKeywordResearch() {
+  const seed = document.getElementById('kwSeed').value.trim();
+  if (!seed) { toast('Enter a seed keyword', 'error'); return; }
+
+  showLoading('Researching keywords...');
+  document.getElementById('btnResearch').disabled = true;
+  try {
+    const data = await api('/api/keyword-research', {
+      method: 'POST',
+      body: JSON.stringify({
+        seed,
+        depth: parseInt(document.getElementById('kwDepth').value),
+        expand_modifiers: document.getElementById('kwExpand').checked
+      })
+    });
+    hideLoading();
+
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    state.keywordData = data;
+    document.getElementById('kwResults').style.display = 'block';
+    document.getElementById('btnTrackKw').style.display = 'inline-flex';
+    document.getElementById('btnExportCsv').style.display = 'inline-flex';
+
+    // Compute totals
+    const allKw = new Set();
+    ['suggestions','modifier_expanded','related_searches','people_also_ask'].forEach(k => {
+      (data[k] || []).forEach(w => allKw.add(w));
+    });
+
+    // Metrics
+    document.getElementById('kwMetrics').innerHTML = `
+      <div class="metric-card"><div class="metric-icon purple"><i class="fas fa-key"></i></div><div class="metric-label">Total Keywords</div><div class="metric-value">${allKw.size}</div></div>
+      <div class="metric-card"><div class="metric-icon blue"><i class="fas fa-lightbulb"></i></div><div class="metric-label">Autocomplete</div><div class="metric-value">${(data.suggestions||[]).length}</div></div>
+      <div class="metric-card"><div class="metric-icon green"><i class="fas fa-question-circle"></i></div><div class="metric-label">People Also Ask</div><div class="metric-value">${(data.people_also_ask||[]).length}</div></div>
+      <div class="metric-card"><div class="metric-icon yellow"><i class="fas fa-link"></i></div><div class="metric-label">Related Searches</div><div class="metric-value">${(data.related_searches||[]).length}</div></div>
+    `;
+
+    // Intent chart
+    renderIntentChart(data.intent_map || {});
+
+    // Suggestions
+    document.getElementById('kwSuggestions').innerHTML = (data.suggestions||[]).map(k =>
+      `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.88rem;">${escapeHtml(k)}</div>`
+    ).join('') || '<div class="empty-state" style="padding:16px;"><p>No suggestions found.</p></div>';
+
+    // PAA
+    document.getElementById('kwPAA').innerHTML = (data.people_also_ask||[]).map(q =>
+      `<div class="issue-item info"><span class="issue-icon">❓</span><div>${escapeHtml(q)}</div></div>`
+    ).join('') || '<div class="empty-state" style="padding:16px;"><p>No PAA questions found.</p></div>';
+
+    // Related
+    document.getElementById('kwRelated').innerHTML = (data.related_searches||[]).map(r =>
+      `<span class="badge badge-info" style="margin:3px;">${escapeHtml(r)}</span>`
+    ).join('') || '<div class="empty-state" style="padding:16px;"><p>No related searches found.</p></div>';
+
+    // SERP
+    if (data.serp_results && data.serp_results.length) {
+      document.getElementById('kwSerpTable').innerHTML = `
+        <table>
+          <thead><tr><th>Title</th><th>URL</th><th>Snippet</th></tr></thead>
+          <tbody>${data.serp_results.map(r => `<tr><td style="max-width:300px;">${escapeHtml(r.title||'')}</td><td style="max-width:250px;font-size:0.8rem;color:var(--accent);">${escapeHtml(r.url||'')}</td><td style="max-width:400px;font-size:0.8rem;">${escapeHtml((r.snippet||'').substring(0,150))}</td></tr>`).join('')}</tbody>
+        </table>`;
+    }
+
+    toast('Keyword research complete!', 'success');
+  } catch(e) {
+    hideLoading();
+    toast('Research failed: ' + e.message, 'error');
+  }
+  document.getElementById('btnResearch').disabled = false;
+}
+
+let kwIntentChart = null;
+function renderIntentChart(intentMap) {
+  const counts = {};
+  Object.values(intentMap).forEach(i => { counts[i] = (counts[i]||0)+1; });
+  const ctx = document.getElementById('kwIntentChart');
+  if (kwIntentChart) kwIntentChart.destroy();
+  const colors = { informational: '#3b82f6', commercial: '#f59e0b', transactional: '#10b981', navigational: '#8b5cf6' };
+  kwIntentChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(counts),
+      datasets: [{ data: Object.values(counts), backgroundColor: Object.keys(counts).map(k => colors[k] || '#94a3b8'), borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { padding: 16, usePointStyle: true } } },
+      cutout: '60%'
+    }
+  });
+}
+
+async function trackCurrentKeyword() {
+  if (!state.keywordData) { toast('No keyword data to track', 'error'); return; }
+  showLoading('Tracking keyword...');
+  const res = await api('/api/tracking', { method: 'POST', body: '{}' });
+  hideLoading();
+  if (res.success) toast(`Tracking "${res.keyword}"!`, 'success');
+  else toast(res.error || 'Failed', 'error');
+}
+
+/* ══════════════════════════════════════════════
+   Pillar-Cluster
+   ══════════════════════════════════════════════ */
+function updateClusterForm() {
+  document.getElementById('clusterNoData').style.display = state.keywordData ? 'none' : 'block';
+  document.getElementById('clusterForm').style.display = state.keywordData ? 'block' : 'none';
+}
+
+async function buildClusterMap() {
+  showLoading('Building cluster map...');
+  document.getElementById('btnBuildCluster').disabled = true;
+  try {
+    const data = await api('/api/pillar-cluster', {
+      method: 'POST',
+      body: JSON.stringify({ threshold: parseFloat(document.getElementById('clusterThreshold').value) })
+    });
+    hideLoading();
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    state.clusterMap = data;
+    document.getElementById('clusterResults').style.display = 'block';
+
+    // Metrics
+    const s = data.stats;
+    document.getElementById('clusterMetrics').innerHTML = `
+      <div class="metric-card"><div class="metric-icon purple"><i class="fas fa-layer-group"></i></div><div class="metric-label">Clusters</div><div class="metric-value">${s.total_clusters}</div></div>
+      <div class="metric-card"><div class="metric-icon blue"><i class="fas fa-key"></i></div><div class="metric-label">Keywords</div><div class="metric-value">${s.total_keywords}</div></div>
+      <div class="metric-card"><div class="metric-icon green"><i class="fas fa-file-alt"></i></div><div class="metric-label">Content Pieces</div><div class="metric-value">${s.total_content_pieces}</div></div>
+    `;
+
+    // Chart
+    renderClusterChart(data.pillar_clusters);
+
+    // Content plan
+    let html = '';
+    data.content_plan.forEach((plan, i) => {
+      html += `
+        <div class="expander">
+          <div class="expander-header" onclick="toggleExpander(this)">
+            <span>🏛️ ${escapeHtml(plan.pillar_title)} (${plan.total_content_pieces} articles)</span>
+            <i class="fas fa-chevron-right chevron"></i>
+          </div>
+          <div class="expander-body">
+            <div style="margin-bottom:8px;"><strong>Pillar keyword:</strong> ${escapeHtml(plan.pillar_keyword)}</div>
+            <div style="margin-bottom:8px;"><strong>Intent:</strong> <span class="badge badge-purple">${plan.pillar_intent}</span></div>
+            <strong>Articles:</strong>
+            <table style="margin-top:8px;">
+              <thead><tr><th>Keyword</th><th>Intent</th><th>Suggested Title</th></tr></thead>
+              <tbody>${plan.articles.map(a => `<tr><td>${escapeHtml(a.keyword)}</td><td><span class="badge badge-info">${a.intent}</span></td><td>${escapeHtml(a.suggested_title)}</td></tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>`;
+    });
+    document.getElementById('clusterContentPlan').innerHTML = html;
+    toast('Cluster map built!', 'success');
+  } catch(e) { hideLoading(); toast('Failed: ' + e.message, 'error'); }
+  document.getElementById('btnBuildCluster').disabled = false;
+}
+
+let clusterChart = null;
+function renderClusterChart(pillarClusters) {
+  const ctx = document.getElementById('clusterChart');
+  if (clusterChart) clusterChart.destroy();
+  const labels = pillarClusters.map(pc => pc.pillar_keyword.substring(0, 25));
+  const sizes = pillarClusters.map(pc => pc.size);
+  clusterChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Keywords',
+        data: sizes,
+        backgroundColor: 'rgba(99,102,241,0.7)',
+        borderColor: 'rgba(99,102,241,1)',
+        borderWidth: 1,
+        borderRadius: 6,
+        barPercentage: 0.6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function toggleExpander(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+/* ══════════════════════════════════════════════
+   Article Generator
+   ══════════════════════════════════════════════ */
+async function loadProviders() {
+  try {
+    const data = await api('/api/article/providers');
+    const sel = document.getElementById('articleProvider');
+    sel.innerHTML = data.providers.map(p => `<option value="${p}" ${p === data.default ? 'selected' : ''}>${p.toUpperCase()}</option>`).join('');
+    if (!data.providers.length) sel.innerHTML = '<option value="ollama">Ollama (may be offline)</option>';
+  } catch(e) {}
+}
+
+async function generateArticle() {
+  const topic = document.getElementById('articleTopic').value.trim();
+  if (!topic) { toast('Enter a topic', 'error'); return; }
+
+  const keywords = document.getElementById('articleKeywords').value.split('\n').map(k => k.trim()).filter(Boolean);
+  showLoading('Generating article...');
+  document.getElementById('btnGenArticle').disabled = true;
+  try {
+    const data = await api('/api/article/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        topic,
+        keywords: keywords.length ? keywords : [topic],
+        provider: document.getElementById('articleProvider').value,
+        word_count: parseInt(document.getElementById('articleWordCount').value),
+        tone: document.getElementById('articleTone').value,
+        style: document.getElementById('articleStyle').value,
+      })
+    });
+    hideLoading();
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    state.generatedArticle = data.article;
+    state.articleTopic = data.topic;
+    document.getElementById('articleResult').style.display = 'block';
+    document.getElementById('articleContent').innerHTML = marked.parse(data.article);
+    toast('Article generated!', 'success');
+  } catch(e) { hideLoading(); toast('Failed: ' + e.message, 'error'); }
+  document.getElementById('btnGenArticle').disabled = false;
+}
+
+function copyArticle() {
+  navigator.clipboard.writeText(state.generatedArticle);
+  toast('Copied to clipboard!', 'success');
+}
+
+function downloadArticle() {
+  const blob = new Blob([state.generatedArticle], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.articleTopic || 'article').toLowerCase().replace(/\s+/g, '_') + '.md';
+  a.click();
+}
+
+/* ══════════════════════════════════════════════
+   Export: PDF Audit Report
+   ══════════════════════════════════════════════ */
+async function exportAuditPdf() {
+  if (!state.auditResult) { toast('No audit to export', 'error'); return; }
+  showLoading('Generating PDF report...');
+  try {
+    const res = await fetch(API + '/api/audit/export-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Session-ID': sessionId, ...authHeaders() },
+      body: JSON.stringify({ audit_result: state.auditResult })
+    });
+    hideLoading();
+    if (!res.ok) { const e = await res.json(); toast(e.error || 'Export failed', 'error'); return; }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'seo-audit-report.pdf';
+    a.click();
+    toast('PDF exported!', 'success');
+  } catch(e) { hideLoading(); toast('Export failed: ' + e.message, 'error'); }
+}
+
+/* ══════════════════════════════════════════════
+   Export: CSV Keywords
+   ══════════════════════════════════════════════ */
+async function exportKeywordsCsv() {
+  if (!state.keywordData) { toast('No keyword data to export', 'error'); return; }
+  showLoading('Generating CSV...');
+  try {
+    const res = await fetch(API + '/api/keyword-research/export-csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Session-ID': sessionId, ...authHeaders() },
+      body: JSON.stringify({ keyword_data: state.keywordData })
+    });
+    hideLoading();
+    if (!res.ok) { const e = await res.json(); toast(e.error || 'Export failed', 'error'); return; }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'keywords-export.csv';
+    a.click();
+    toast('CSV exported!', 'success');
+  } catch(e) { hideLoading(); toast('Export failed: ' + e.message, 'error'); }
+}
+
+/* ══════════════════════════════════════════════
+   SEO Audit
+   ══════════════════════════════════════════════ */
+async function runAudit() {
+  const url = document.getElementById('auditUrl').value.trim();
+  if (!url) { toast('Enter a URL', 'error'); return; }
+
+  showLoading('Auditing URL...');
+  document.getElementById('btnAudit').disabled = true;
+  try {
+    const data = await api('/api/audit', {
+      method: 'POST',
+      body: JSON.stringify({ url, keyword: document.getElementById('auditKeyword').value.trim() })
+    });
+    hideLoading();
+    if (data.error && !data.score) { toast(data.error, 'error'); return; }
+
+    state.auditResult = data;
+    renderAuditResults(data);
+    document.getElementById('btnExportPdf').style.display = 'inline-flex';
+    toast('Audit complete!', 'success');
+  } catch(e) { hideLoading(); toast('Failed: ' + e.message, 'error'); }
+  document.getElementById('btnAudit').disabled = false;
+}
+
+function renderAuditResults(data) {
+  const container = document.getElementById('auditResults');
+  container.style.display = 'block';
+  const score = data.score || 0;
+  const scoreClass = score >= 80 ? 'excellent' : score >= 50 ? 'good' : 'poor';
+  const scoreLabel = score >= 80 ? 'Excellent' : score >= 50 ? 'Good' : 'Needs Work';
+
+  let issuesHtml = '';
+  (data.issues || []).forEach(issue => {
+    const icon = issue.severity === 'critical' ? '🔴' : issue.severity === 'warning' ? '🟡' : 'ℹ️';
+    issuesHtml += `<div class="issue-item ${issue.severity}"><span class="issue-icon">${icon}</span><div><div class="issue-cat">${escapeHtml(issue.category)}</div><div>${escapeHtml(issue.message)}</div></div></div>`;
+  });
+
+  const headings = data.headings || {};
+  let headingsHtml = '';
+  for (let i = 1; i <= 6; i++) {
+    const tag = 'h' + i;
+    const items = headings[tag] || [];
+    if (items.length) {
+      headingsHtml += `<div style="margin-bottom:4px;"><strong>${tag.toUpperCase()} (${items.length}):</strong> ${items.map(h => `<span class="badge badge-info" style="margin:2px;">${escapeHtml(h.substring(0,50))}</span>`).join(' ')}</div>`;
+    }
+  }
+
+  const images = data.images || {};
+  const links = data.links || {};
+
+  container.innerHTML = `
+    <div class="metrics-row">
+      <div class="metric-card" style="display:flex;flex-direction:column;align-items:center;">
+        <div class="score-circle ${scoreClass}"><span class="score-value">${score}</span><span class="score-label">${scoreLabel}</span></div>
+      </div>
+      <div class="metric-card"><div class="metric-icon purple"><i class="fas fa-font"></i></div><div class="metric-label">Word Count</div><div class="metric-value">${data.word_count || 0}</div></div>
+      <div class="metric-card"><div class="metric-icon blue"><i class="fas fa-link"></i></div><div class="metric-label">Internal Links</div><div class="metric-value">${links.internal_count || 0}</div></div>
+      <div class="metric-card"><div class="metric-icon green"><i class="fas fa-image"></i></div><div class="metric-label">Images</div><div class="metric-value">${images.total || 0}</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="fas fa-info-circle"></i> Page Info</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="form-label">Title</div>
+          <div style="font-size:0.9rem;${!data.page_title ? 'color:var(--danger);' : ''}">${data.page_title ? escapeHtml(data.page_title) + ' <span class="badge badge-info">' + data.page_title.length + ' chars</span>' : '<span class="badge badge-danger">MISSING</span>'}</div>
+        </div>
+        <div>
+          <div class="form-label">Meta Description</div>
+          <div style="font-size:0.9rem;${!data.meta_description ? 'color:var(--danger);' : ''}">${data.meta_description ? escapeHtml(data.meta_description) + ' <span class="badge badge-info">' + data.meta_description.length + ' chars</span>' : '<span class="badge badge-danger">MISSING</span>'}</div>
+        </div>
+        <div>
+          <div class="form-label">Canonical</div>
+          <div style="font-size:0.85rem;word-break:break-all;">${data.canonical ? escapeHtml(data.canonical) : '<span class="badge badge-warning">Missing</span>'}</div>
+        </div>
+        <div>
+          <div class="form-label">Text/HTML Ratio</div>
+          <div style="font-size:0.9rem;">${data.text_to_html_ratio || 0}%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="fas fa-heading"></i> Headings Hierarchy</div></div>
+      <div style="font-size:0.88rem;">${headingsHtml || '<div style="color:var(--text-muted);">No headings found.</div>'}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="fas fa-exclamation-triangle"></i> Issues (${(data.issues||[]).length})</div></div>
+      <div>${issuesHtml || '<div class="empty-state" style="padding:16px;"><i class="fas fa-check-circle" style="color:var(--success);"></i><p>No issues found — great job!</p></div>'}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="fas fa-image"></i> Images (${images.total || 0})</div></div>
+      <div class="metrics-row" style="margin-bottom:0;">
+        <div class="metric-card"><div class="metric-label">With Alt Text</div><div class="metric-value" style="color:var(--success);">${images.with_alt || 0}</div></div>
+        <div class="metric-card"><div class="metric-label">Without Alt</div><div class="metric-value" style="color:var(--danger);">${images.without_alt || 0}</div></div>
+        <div class="metric-card"><div class="metric-label">Alt Coverage</div><div class="metric-value">${images.alt_coverage || 0}%</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="fas fa-link"></i> Links</div></div>
+      <div class="metrics-row" style="margin-bottom:0;">
+        <div class="metric-card"><div class="metric-label">Internal</div><div class="metric-value">${links.internal_count || 0}</div></div>
+        <div class="metric-card"><div class="metric-label">External</div><div class="metric-value">${links.external_count || 0}</div></div>
+        <div class="metric-card"><div class="metric-label">Nofollow</div><div class="metric-value">${links.nofollow_count || 0}</div></div>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   Batch Audit
+   ══════════════════════════════════════════════ */
+function handleBatchFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    state.batchCsv = ev.target.result;
+    document.getElementById('batchFileInfo').style.display = 'block';
+    document.getElementById('batchFileInfo').innerHTML = `<span class="badge badge-info">📎 ${escapeHtml(file.name)} (${(file.size/1024).toFixed(1)} KB)</span>`;
+    document.getElementById('btnBatch').disabled = false;
+  };
+  reader.readAsText(file);
+}
+
+async function downloadSampleCsv() {
+  const data = await api('/api/batch-audit/sample-csv');
+  const blob = new Blob([data.csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sample.csv';
+  a.click();
+}
+
+async function runBatchAudit() {
+  if (!state.batchCsv) { toast('Upload a CSV first', 'error'); return; }
+
+  showLoading('Running batch audit... (this may take a while)');
+  document.getElementById('btnBatch').disabled = true;
+  try {
+    const data = await api('/api/batch-audit', {
+      method: 'POST',
+      body: JSON.stringify({ csv: state.batchCsv })
+    });
+    hideLoading();
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    const container = document.getElementById('batchResults');
+    container.style.display = 'block';
+
+    const valid = (data.results||[]).filter(r => !r.error || r.page_title);
+    const avg = valid.length ? valid.reduce((s,r) => s + (r.score||0), 0) / valid.length : 0;
+
+    container.innerHTML = `
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-icon purple"><i class="fas fa-globe"></i></div><div class="metric-label">URLs Audited</div><div class="metric-value">${data.count || 0}</div></div>
+        <div class="metric-card"><div class="metric-icon green"><i class="fas fa-chart-line"></i></div><div class="metric-label">Avg Score</div><div class="metric-value">${avg.toFixed(0)}/100</div></div>
+        <div class="metric-card"><div class="metric-icon red"><i class="fas fa-exclamation-circle"></i></div><div class="metric-label">Errors</div><div class="metric-value">${(data.count||0) - valid.length}</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fas fa-table"></i> Comparison</div></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>URL</th><th>Score</th><th>Title</th><th>Words</th><th>Internal Links</th><th>Images</th><th>Issues</th></tr></thead>
+            <tbody>${(data.comparison||[]).map(r => `
+              <tr>
+                <td style="max-width:250px;font-size:0.85rem;">${escapeHtml(r.URL||'')}</td>
+                <td><span class="badge ${(r.Score||0)>=80?'badge-success':(r.Score||0)>=50?'badge-warning':'badge-danger'}">${r.Score||0}</span></td>
+                <td style="max-width:200px;font-size:0.85rem;">${escapeHtml((r.Title||'').substring(0,40))}</td>
+                <td>${r.Words||0}</td>
+                <td>${r['Internal Links']||0}</td>
+                <td>${r.Images||0}</td>
+                <td>${r.Issues||0}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    toast('Batch audit complete!', 'success');
+  } catch(e) { hideLoading(); toast('Failed: ' + e.message, 'error'); }
+  document.getElementById('btnBatch').disabled = false;
+}
+
+/* ══════════════════════════════════════════════
+   Recommendations
+   ══════════════════════════════════════════════ */
+function loadRecommendations() {
+  if (state.auditResult) {
+    document.getElementById('recNoAudit').style.display = 'none';
+    document.getElementById('recContent').style.display = 'block';
+    const d = state.auditResult;
+    const score = d.score || 0;
+    document.getElementById('recAuditInfo').innerHTML = `
+      <div class="badge ${score>=80?'badge-success':score>=50?'badge-warning':'badge-danger'}" style="font-size:0.85rem;padding:6px 14px;">
+        Auditing: <strong>${escapeHtml(d.final_url || d.url || '')}</strong> — Score: ${score}/100
+      </div>`;
+
+    // Quick wins
+    const wins = generateQuickWinsLocal(d);
+    if (wins.length) {
+      document.getElementById('quickWins').innerHTML = wins.map(w => {
+        const icon = w.impact === 'High' ? '🔴' : w.impact === 'Medium' ? '🟡' : '🟢';
+        return `<div class="issue-item" style="background:var(--bg-input);">
+          <span class="issue-icon">${icon}</span>
+          <div><div style="font-weight:600;">${escapeHtml(w.action)}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);">Impact: ${w.impact} | Difficulty: ${w.difficulty}</div>
+          <div style="font-size:0.8rem;color:var(--accent);margin-top:2px;">💡 ${escapeHtml(w.example)}</div></div>
+        </div>`;
+      }).join('');
+    } else {
+      document.getElementById('quickWins').innerHTML = '<div class="empty-state" style="padding:16px;"><i class="fas fa-check-circle" style="color:var(--success);"></i><p>No quick wins — page looks well optimized!</p></div>';
+    }
+  } else {
+    document.getElementById('recNoAudit').style.display = 'block';
+    document.getElementById('recContent').style.display = 'none';
+  }
+}
+
+function generateQuickWinsLocal(data) {
+  const wins = [];
+  const title = data.page_title || '';
+  const desc = data.meta_description || '';
+  const wc = data.word_count || 0;
+  const imgs = data.images || {};
+  const links = data.links || {};
+  const ka = data.keyword_analysis || {};
+
+  if (!title) wins.push({ action: 'Add a compelling page title', impact: 'High', difficulty: 'Easy', example: 'Use: Primary Keyword | Secondary - Brand' });
+  else if (title.length < 30) wins.push({ action: `Expand title (${title.length} chars, aim 50-60)`, impact: 'High', difficulty: 'Easy', example: 'Add primary keyword and compelling modifier' });
+
+  if (!desc) wins.push({ action: 'Write a meta description with target keyword', impact: 'High', difficulty: 'Easy', example: '150-160 chars, include keyword + CTA' });
+  const h1s = (data.headings||{}).h1 || [];
+  if (!h1s.length) wins.push({ action: 'Add an H1 tag with primary keyword', impact: 'High', difficulty: 'Easy', example: 'One H1 per page matching search intent' });
+  if (wc < 300) wins.push({ action: `Expand content (${wc} words, aim 1500+)`, impact: 'High', difficulty: 'Hard', example: 'Add guides, FAQs, conclusion' });
+  if (imgs.without_alt > 0) wins.push({ action: `Add alt text to ${imgs.without_alt} images`, impact: 'Medium', difficulty: 'Easy', example: 'Describe image with relevant keywords' });
+  if (!data.canonical) wins.push({ action: 'Add canonical tag', impact: 'Medium', difficulty: 'Easy', example: '<link rel="canonical" href="..." />' });
+  if (links.internal_count === 0) wins.push({ action: 'Add internal links to other pages', impact: 'Medium', difficulty: 'Easy', example: 'Link to 3-5 related pages' });
+
+  const impactOrder = { High: 0, Medium: 1, Low: 2 };
+  wins.sort((a,b) => (impactOrder[a.impact]||2) - (impactOrder[b.impact]||2));
+  return wins;
+}
+
+async function generateRecommendations() {
+  showLoading('Generating AI recommendations...');
+  document.getElementById('btnRecs').disabled = true;
+  try {
+    const data = await api('/api/recommendations', { method: 'POST', body: '{}' });
+    hideLoading();
+    if (data.error) { toast(data.error, 'error'); return; }
+    document.getElementById('aiRecs').innerHTML = `<div class="markdown-content">${marked.parse(data.recommendations)}</div>`;
+    toast('Recommendations generated!', 'success');
+  } catch(e) { hideLoading(); toast('Failed: ' + e.message, 'error'); }
+  document.getElementById('btnRecs').disabled = false;
+}
+
+/* ══════════════════════════════════════════════
+   Keyword Tracking
+   ══════════════════════════════════════════════ */
+async function loadTracking() {
+  try {
+    const data = await api('/api/tracking');
+    const container = document.getElementById('trackedList');
+    if (!data.tracked || !data.tracked.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-chart-line"></i><p>No keywords tracked yet. Run keyword research and click "Track Keyword".</p></div>';
+      return;
+    }
+    container.innerHTML = data.tracked.map(item => {
+      const latest = item.latest_snapshot || {};
+      return `
+        <div class="expander">
+          <div class="expander-header" onclick="toggleExpander(this)">
+            <span>📌 <strong>${escapeHtml(item.keyword)}</strong> — ${item.snapshot_count} snapshot(s)</span>
+            <div>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteTracked('${escapeHtml(item.keyword)}')" style="margin-right:8px;">
+                <i class="fas fa-trash"></i>
+              </button>
+              <i class="fas fa-chevron-right chevron"></i>
+            </div>
+          </div>
+          <div class="expander-body">
+            <div class="metrics-row" style="margin-bottom:0;">
+              <div class="metric-card"><div class="metric-label">Total Keywords</div><div class="metric-value">${latest.total_keywords||0}</div></div>
+              <div class="metric-card"><div class="metric-label">Suggestions</div><div class="metric-value">${latest.suggestions_count||0}</div></div>
+              <div class="metric-card"><div class="metric-label">PAA</div><div class="metric-value">${latest.paa_count||0}</div></div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function deleteTracked(keyword) {
+  await api('/api/tracking/' + encodeURIComponent(keyword), { method: 'DELETE' });
+  toast('Keyword removed', 'success');
+  loadTracking();
+}
+
+/* ══════════════════════════════════════════════
+   Content Calendar
+   ══════════════════════════════════════════════ */
+async function loadCalendar() {
+  try {
+    const data = await api('/api/calendar');
+    if (!data.events || !data.events.length) {
+      document.getElementById('calGrid').innerHTML = '';
+      document.getElementById('calMetrics').innerHTML = '';
+      document.getElementById('calEmpty').style.display = 'block';
+      return;
+    }
+    document.getElementById('calEmpty').style.display = 'none';
+
+    const stats = data.stats || {};
+    document.getElementById('calMetrics').innerHTML = `
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-icon purple"><i class="fas fa-calendar"></i></div><div class="metric-label">Total Events</div><div class="metric-value">${stats.total||0}</div></div>
+        <div class="metric-card"><div class="metric-icon green"><i class="fas fa-building"></i></div><div class="metric-label">Pillar Pages</div><div class="metric-value">${(stats.by_type||{}).pillar||0}</div></div>
+        <div class="metric-card"><div class="metric-icon blue"><i class="fas fa-file-alt"></i></div><div class="metric-label">Cluster Articles</div><div class="metric-value">${(stats.by_type||{}).cluster||0}</div></div>
+      </div>`;
+
+    const statusColors = { planned:'#6c757d', in_progress:'#f59e0b', draft:'#3b82f6', review:'#f97316', published:'#10b981', paused:'#ef4444' };
+    const statusIcons = { planned:'📋', in_progress:'🔨', draft:'📝', review:'👁️', published:'✅', paused:'⏸️' };
+
+    document.getElementById('calGrid').innerHTML = data.events.map(ev => `
+      <div class="calendar-event" style="border-left-color:${statusColors[ev.status]||'#6c757d'}">
+        <div class="event-date">${ev.type === 'pillar' ? '🏛️' : '📄'} ${escapeHtml(ev.date)}</div>
+        <div class="event-title">${escapeHtml(ev.title)}</div>
+        <div class="event-keyword">${escapeHtml(ev.keyword)}</div>
+        <div class="event-actions">
+          <select class="form-select" style="width:auto;padding:4px 8px;font-size:0.8rem;" onchange="updateEventStatus('${ev.id}', this.value)">
+            ${['planned','in_progress','draft','review','published','paused'].map(s => `<option value="${s}" ${s===ev.status?'selected':''}>${statusIcons[s]} ${s.replace('_',' ')}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function generateCalendar() {
+  showLoading('Generating calendar...');
+  try {
+    const data = await api('/api/calendar', { method: 'POST', body: '{}' });
+    hideLoading();
+    if (data.error) { toast(data.error, 'error'); return; }
+    toast(`Generated ${data.count} events!`, 'success');
+    loadCalendar();
+  } catch(e) { hideLoading(); toast('Failed: ' + e.message, 'error'); }
+}
+
+async function updateEventStatus(eventId, status) {
+  await api('/api/calendar/' + eventId, { method: 'PATCH', body: JSON.stringify({ status }) });
+  loadCalendar();
+}
+
+async function exportCalendar(fmt) {
+  const data = await api('/api/calendar/export/' + fmt);
+  if (data.content) {
+    const ext = fmt === 'markdown' ? 'md' : 'json';
+    const type = fmt === 'markdown' ? 'text/markdown' : 'application/json';
+    const blob = new Blob([data.content], { type });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'content_calendar.' + ext;
+    a.click();
+    toast('Calendar exported!', 'success');
+  }
+}
+
+/* ══════════════════════════════════════════════
+   Audit History
+   ══════════════════════════════════════════════ */
+async function loadAuditHistory() {
+  try {
+    const data = await api('/api/audit-history?limit=50');
+    if (!data.history || !data.history.length) {
+      document.getElementById('historyTable').innerHTML = '';
+      document.getElementById('historyEmpty').style.display = 'block';
+      return;
+    }
+    document.getElementById('historyEmpty').style.display = 'none';
+    document.getElementById('historyTable').innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>URL</th><th>Score</th><th>Words</th><th>Issues</th></tr></thead>
+        <tbody>${data.history.map(h => `
+          <tr>
+            <td style="white-space:nowrap;">${h.created_at ? new Date(h.created_at).toLocaleDateString() : '—'}</td>
+            <td style="max-width:300px;font-size:0.85rem;">${escapeHtml(h.url)}</td>
+            <td><span class="badge ${(h.score||0)>=80?'badge-success':(h.score||0)>=50?'badge-warning':'badge-danger'}">${h.score}/100</span></td>
+            <td>${h.word_count}</td>
+            <td>${h.issues_count}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { console.error(e); }
+}
+
+/* ══════════════════════════════════════════════
+   Init
+   ══════════════════════════════════════════════ */
+(async function init() {
+  await checkAuth();
+  if (authToken) loadDashboard();
+})();
+</script>
+</body>
+</html>

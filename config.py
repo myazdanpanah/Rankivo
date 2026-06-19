@@ -53,3 +53,10 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "")
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
 NOTIFICATION_DAYS_BEFORE = int(os.getenv("NOTIFICATION_DAYS_BEFORE", "3"))
+
+# --- Auth Settings ---
+# Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to enable login protection.
+# Leave empty to disable authentication (open access).
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "rankivo")
+SECRET_KEY = os.getenv("SECRET_KEY", os.urandom(32).hex())
