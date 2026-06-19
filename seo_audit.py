@@ -13,11 +13,78 @@ def _random_ua() -> str:
     return random.choice(USER_AGENTS)
 
 
-def audit_url(url: str, focus_keyword: str = "") -> dict:
+PAGE_TYPES = {
+    "homepage": {
+        "label": "Homepage / Main Page",
+        "icon": "🏠",
+        "description": "Brand authority, navigation, broad keyword targeting, internal linking hub",
+    },
+    "product": {
+        "label": "Product / Service Page",
+        "icon": "🛒",
+        "description": "Conversion-focused, unique descriptions, structured data, transactional intent",
+    },
+    "blog": {
+        "label": "Blog / Article Page",
+        "icon": "📝",
+        "description": "Engagement, E-E-A-T, search intent alignment, content depth",
+    },
+    "generic": {
+        "label": "General Page",
+        "icon": "📄",
+        "description": "Standard SEO checks for any page type",
+    },
+}
+
+
+def auto_detect_page_type(url: str) -> str:
+    """
+    Auto-detect page type from URL patterns.
+    Returns one of 'homepage', 'product', 'blog', 'generic'.
+    """
+    parsed = urlparse(url if url.startswith(("http://", "https://")) else f"https://{url}")
+    path = parsed.path.lower().rstrip("/")
+
+    # Homepage: root or empty path
+    if not path or path == "/":
+        return "homepage"
+
+    # Blog patterns
+    blog_patterns = ["/blog", "/post", "/article", "/news", "/resource",
+                     "/guide", "/tutorial", "/how-to", "/tips"]
+    if any(p in path for p in blog_patterns):
+        return "blog"
+
+    # Product patterns
+    product_patterns = ["/product", "/item", "/shop", "/buy", "/store",
+                        "/p/", "/dp/", "/collection", "/category",
+                        "/service", "/pricing", "/plan"]
+    if any(p in path for p in product_patterns):
+        return "product"
+
+    # Page segments count heuristic: deep paths likely product/detail pages
+    segments = [s for s in path.split("/") if s]
+    if len(segments) >= 3:
+        return "product"
+
+    return "generic"
+
+
+def audit_url(url: str, focus_keyword: str = "", page_type: str = "generic") -> dict:
     """
     Perform a full SEO audit on a given URL.
+    Args:
+        url: The URL to audit.
+        focus_keyword: Optional target keyword for density analysis.
+        page_type: One of 'homepage', 'product', 'blog', 'generic', or 'auto'.
     Returns a dict with all audit data.
     """
+    # Auto-detect page type if requested
+    detected = None
+    if page_type == "auto":
+        detected = auto_detect_page_type(url)
+        page_type = detected
+
     # Ensure URL has a scheme
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
@@ -39,6 +106,9 @@ def audit_url(url: str, focus_keyword: str = "") -> dict:
         "final_url": final_url,
         "status_code": resp.status_code,
         "redirected": url != final_url,
+        "page_type": page_type,
+        "page_type_auto_detected": detected is not None,
+        "page_type_info": PAGE_TYPES.get(page_type, PAGE_TYPES["generic"]),
         "page_title": _get_title(soup),
         "meta_description": _get_meta_description(soup),
         "meta_keywords": _get_meta_keywords(soup),
@@ -60,8 +130,9 @@ def audit_url(url: str, focus_keyword: str = "") -> dict:
         result["keyword_analysis"] = _analyze_keyword(body_text, focus_keyword.strip())
 
     # Generate issues and score
-    result["issues"] = _generate_issues(result)
-    result["score"] = _calculate_score(result)
+    result["issues"] = _generate_issues(result, page_type)
+    result["score"] = _calculate_score(result, page_type)
+    result["page_type_insights"] = _generate_page_type_insights(result, page_type)
 
     return result
 
@@ -263,12 +334,13 @@ def _analyze_keyword(text: str, keyword: str) -> dict:
 # ──────────────────────────────────────────────
 
 
-def _generate_issues(data: dict) -> list[dict]:
+def _generate_issues(data: dict, page_type: str = "generic") -> list[dict]:
     issues = []
 
     def _add(severity: str, category: str, message: str):
         issues.append({"severity": severity, "category": category, "message": message})
 
+    # ── Universal checks ──
     # Title
     title = data["page_title"]
     if not title:
@@ -293,18 +365,6 @@ def _generate_issues(data: dict) -> list[dict]:
         _add("critical", "headings", "Missing H1 tag")
     elif len(h1s) > 1:
         _add("warning", "headings", f"Multiple H1 tags ({len(h1s)}) — use only one")
-
-    # Word count
-    wc = data["word_count"]
-    if wc < 300:
-        _add("warning", "content", f"Very thin content ({wc} words) — aim for 1000+")
-    elif wc < 800:
-        _add("info", "content", f"Content could be longer ({wc} words) — aim for 1000+")
-
-    # Text to HTML ratio
-    ratio = data["text_to_html_ratio"]
-    if ratio < 10:
-        _add("warning", "content", f"Low text-to-HTML ratio ({ratio}%) — page may be too code-heavy")
 
     # Canonical
     if not data["canonical"]:
@@ -334,20 +394,293 @@ def _generate_issues(data: dict) -> list[dict]:
         elif ka["exact_density_pct"] > 2.5:
             _add("info", "keyword", f"Keyword density is high ({ka['exact_density_pct']}%) — consider reducing")
 
+    # ── Page-type-specific checks ──
+    if page_type == "homepage":
+        _generate_homepage_issues(data, _add)
+    elif page_type == "product":
+        _generate_product_issues(data, _add)
+    elif page_type == "blog":
+        _generate_blog_issues(data, _add)
+
     return issues
 
 
-def _calculate_score(data: dict) -> int:
-    """Calculate an SEO score from 0-100."""
+# ──────────────────────────────────────────────
+# Homepage-Specific Issues
+# ──────────────────────────────────────────────
+
+def _generate_homepage_issues(data: dict, _add) -> None:
+    """Homepage: brand authority, navigation, internal linking hub."""
+    wc = data["word_count"]
+    links = data["links"]
+    headings = data["headings"]
+    title = (data["page_title"] or "").lower()
+
+    # Internal linking is critical for homepages
+    if links["internal_count"] < 5:
+        _add("critical", "links", f"Homepage has only {links['internal_count']} internal links — aim for 10+ to key pages")
+    elif links["internal_count"] < 10:
+        _add("warning", "links", f"Homepage has {links['internal_count']} internal links — add links to key categories and pages")
+
+    # Brand name in title
+    if title and not any(w in title for w in ["|", "-", "—", ":"]):
+        _add("info", "title", "Consider adding a separator and brand name to the title (e.g. 'Keyword | Brand')")
+
+    # Heading hierarchy for navigation
+    h2s = headings.get("h2", [])
+    h3s = headings.get("h3", [])
+    if len(h2s) < 2:
+        _add("info", "headings", "Homepage should use H2s for main sections (e.g. Services, Features, About)")
+
+    # Word count — homepages are typically lighter
+    if wc > 0 and wc < 100:
+        _add("warning", "content", f"Homepage has very little text ({wc} words) — add brand value proposition and key messaging")
+
+    # OG tags for social sharing
+    og = data.get("og_tags", {})
+    if not og.get("og:title"):
+        _add("info", "social", "Missing Open Graph tags — add og:title, og:description, og:image for social sharing")
+
+    # Schema/structured data hint
+    if links["internal_count"] == 0:
+        _add("warning", "technical", "Homepage should link to main category/product pages for proper crawl hierarchy")
+
+
+# ──────────────────────────────────────────────
+# Product Page-Specific Issues
+# ──────────────────────────────────────────────
+
+def _generate_product_issues(data: dict, _add) -> None:
+    """Product page: conversion, unique descriptions, structured data, transactional."""
+    wc = data["word_count"]
+    links = data["links"]
+    img = data["images"]
+    ka = data.get("keyword_analysis", {})
+    title = (data["page_title"] or "").lower()
+    desc = (data["meta_description"] or "").lower()
+
+    # Product descriptions should be substantial
+    if wc < 150:
+        _add("critical", "content", f"Product description too thin ({wc} words) — aim for 300-500+ words of unique copy")
+    elif wc < 300:
+        _add("warning", "content", f"Product description is light ({wc} words) — add benefits, use cases, and specifications")
+
+    # Images are critical for products
+    if img["total"] == 0:
+        _add("critical", "images", "Product page has no images — add high-quality product photos from multiple angles")
+    elif img["total"] == 1:
+        _add("warning", "images", "Only 1 image on product page — add multiple angles, lifestyle shots, and detail images")
+    elif img["total"] < 3:
+        _add("info", "images", f"Only {img['total']} images — consider adding more product views and detail shots")
+
+    # Alt text on product images
+    if img["without_alt"] > 0:
+        _add("warning", "images", f"{img['without_alt']} product images missing alt text — include product name and features")
+
+    # Transactional signals in title/description
+    transactional_words = ["buy", "price", "shop", "order", "deal", "best", "top", "review", "compare"]
+    if ka and ka.get("keyword"):
+        kw = ka["keyword"].lower()
+        if not any(w in kw for w in transactional_words):
+            _add("info", "keyword", "Consider targeting a transactional keyword (e.g. 'buy X', 'best X', 'X review')")
+
+    # Price/buy signals in meta description
+    if desc and not any(w in desc for w in ["price", "buy", "shop", "order", "free", "discount", "deal"]):
+        _add("info", "meta", "Product meta description should include a CTA (buy, shop, compare) or price point")
+
+    # Internal linking to related products
+    if links["internal_count"] < 2:
+        _add("info", "links", "Add links to related products, categories, or comparison pages")
+
+    # Canonical — critical for product variants
+    if not data["canonical"]:
+        _add("warning", "technical", "Missing canonical tag — critical for product pages to avoid duplicate content from variants")
+
+    # Word count upper bound — product pages shouldn't be essays
+    if wc > 2000:
+        _add("info", "content", f"Product page is very long ({wc} words) — consider moving detailed specs to a separate section")
+
+
+# ──────────────────────────────────────────────
+# Blog Page-Specific Issues
+# ──────────────────────────────────────────────
+
+def _generate_blog_issues(data: dict, _add) -> None:
+    """Blog: engagement, E-E-A-T, search intent, content depth, featured snippets."""
+    wc = data["word_count"]
+    headings = data["headings"]
+    links = data["links"]
+    img = data["images"]
+    ratio = data["text_to_html_ratio"]
+
+    # Content depth — blog posts need substance
+    if wc < 300:
+        _add("critical", "content", f"Blog post too short ({wc} words) — aim for 1000-2000 words for comprehensive coverage")
+    elif wc < 800:
+        _add("warning", "content", f"Blog post could be longer ({wc} words) — aim for 1000-2000 words")
+    elif wc > 5000:
+        _add("info", "content", f"Very long post ({wc} words) — consider splitting into a series or adding a table of contents")
+
+    # Heading structure — H2s/H3s for scanability and featured snippets
+    h2s = headings.get("h2", [])
+    h3s = headings.get("h3", [])
+    if len(h2s) == 0:
+        _add("critical", "headings", "No H2 subheadings — blog posts need clear section structure for readability and featured snippets")
+    elif len(h2s) < 3 and wc > 500:
+        _add("warning", "headings", f"Only {len(h2s)} H2 subheadings — add more sections to improve scanability")
+    if wc > 1000 and len(h3s) == 0 and len(h2s) > 0:
+        _add("info", "headings", "Consider adding H3 subheadings within sections for better hierarchy")
+
+    # Internal linking — blogs should funnel to products/categories
+    if links["internal_count"] == 0:
+        _add("warning", "links", "Blog post has no internal links — link to related posts, product pages, or categories")
+    elif links["internal_count"] < 2:
+        _add("info", "links", f"Only {links['internal_count']} internal link(s) — add 3-5 links to related content and product pages")
+
+    # Images improve engagement
+    if img["total"] == 0:
+        _add("warning", "images", "Blog post has no images — add relevant images, screenshots, or infographics")
+    elif img["total"] == 1:
+        _add("info", "images", "Only 1 image — add more visuals to break up text and improve engagement")
+
+    # Text/HTML ratio — blogs should be content-heavy
+    if ratio < 10:
+        _add("warning", "content", f"Low text ratio ({ratio}%) — blog content should be substantial relative to code")
+
+    # Question-based headings for featured snippets
+    h2_texts = " ".join(h2s).lower()
+    if not any(q in h2_texts for q in ["what", "how", "why", "when", "where", "which", "who", "?"]):
+        _add("info", "headings", "Consider using question-based H2s (How, What, Why) to target featured snippets")
+
+    # External links add authority
+    if links["external_count"] == 0 and wc > 500:
+        _add("info", "links", "No external links — citing authoritative sources improves E-E-A-T")
+
+
+# ──────────────────────────────────────────────
+# Page-Type Insights
+# ──────────────────────────────────────────────
+
+def _generate_page_type_insights(data: dict, page_type: str) -> dict:
+    """Generate actionable insights specific to the page type."""
+    info = PAGE_TYPES.get(page_type, PAGE_TYPES["generic"])
+    insights = {
+        "page_type": page_type,
+        "label": info["label"],
+        "focus_areas": [],
+        "recommendations": [],
+    }
+
+    if page_type == "homepage":
+        insights["focus_areas"] = [
+            "Brand authority & messaging",
+            "Internal linking to key pages",
+            "Clear navigation structure",
+            "Social proof & trust signals",
+        ]
+        links = data["links"]
+        if links["internal_count"] < 10:
+            insights["recommendations"].append(
+                f"Add internal links to your top {10 - links["internal_count"]} most important pages (categories, products, contact)"
+            )
+        if not data.get("og_tags", {}).get("og:title"):
+            insights["recommendations"].append("Add Open Graph tags for better social media sharing")
+        if data["word_count"] < 200:
+            insights["recommendations"].append("Add a clear value proposition and brand messaging above the fold")
+
+    elif page_type == "product":
+        insights["focus_areas"] = [
+            "Unique product descriptions",
+            "High-quality product images",
+            "Transactional keyword targeting",
+            "Structured data (Product schema)",
+            "Clear CTAs and conversion paths",
+        ]
+        if data["word_count"] < 300:
+            insights["recommendations"].append("Write unique product descriptions (300+ words) covering benefits, use cases, and specs")
+        if data["images"]["total"] < 3:
+            insights["recommendations"].append("Add multiple product images: main shot, angles, lifestyle, and detail views")
+        if not data["canonical"]:
+            insights["recommendations"].append("Add canonical tags to prevent duplicate content from product variants")
+        ka = data.get("keyword_analysis", {})
+        if ka and ka.get("exact_density_pct", 0) == 0:
+            insights["recommendations"].append("Include target product keyword in the body text naturally")
+
+    elif page_type == "blog":
+        insights["focus_areas"] = [
+            "Content depth & comprehensiveness",
+            "Search intent alignment",
+            "E-E-A-T signals (author, sources)",
+            "Heading structure for featured snippets",
+            "Internal links to product/category pages",
+        ]
+        if data["word_count"] < 1000:
+            insights["recommendations"].append("Expand content to 1000-2000 words for comprehensive coverage")
+        h2s = data["headings"].get("h2", [])
+        if len(h2s) < 3:
+            insights["recommendations"].append("Add more H2 subheadings to improve structure and featured snippet chances")
+        if data["links"]["internal_count"] < 2:
+            insights["recommendations"].append("Add 3-5 internal links to related posts, products, or category pages")
+        if data["images"]["total"] == 0:
+            insights["recommendations"].append("Add relevant images, screenshots, or infographics to improve engagement")
+
+    else:  # generic
+        insights["focus_areas"] = [
+            "Meta tags optimization",
+            "Content quality & depth",
+            "Link strategy",
+            "Image optimization",
+        ]
+
+    return insights
+
+
+def _calculate_score(data: dict, page_type: str = "generic") -> int:
+    """
+    Calculate an SEO score from 0-100 with page-type-specific weighting.
+    
+    Homepage: links & navigation weighted higher.
+    Product: content uniqueness & images weighted higher.
+    Blog: content depth & heading structure weighted higher.
+    """
     score = 100
     issues = data.get("issues", [])
 
+    # Page-type-specific severity multipliers
+    type_multipliers = {
+        "homepage": {
+            "links": 1.5,       # Internal linking is critical
+            "content": 0.8,     # Less text-heavy is OK
+            "images": 0.8,      # Less critical
+            "headings": 1.0,
+        },
+        "product": {
+            "content": 1.4,     # Unique descriptions critical
+            "images": 1.5,      # Product images essential
+            "keyword": 1.3,     # Transactional keywords important
+            "technical": 1.2,   # Canonical is critical for variants
+            "links": 0.9,
+        },
+        "blog": {
+            "content": 1.3,     # Content depth matters
+            "headings": 1.4,    # Structure for snippets
+            "links": 1.2,       # Internal + external links
+            "images": 1.0,
+        },
+        "generic": {},
+    }
+
+    multipliers = type_multipliers.get(page_type, {})
+
     for issue in issues:
+        category = issue.get("category", "")
+        multiplier = multipliers.get(category, 1.0)
+
         if issue["severity"] == "critical":
-            score -= 15
+            score -= int(15 * multiplier)
         elif issue["severity"] == "warning":
-            score -= 7
+            score -= int(7 * multiplier)
         elif issue["severity"] == "info":
-            score -= 2
+            score -= int(2 * multiplier)
 
     return max(0, min(100, score))

@@ -1073,7 +1073,7 @@ tr:hover td { background: var(--bg-input); }
         <div class="card-header">
           <div class="card-title"><i class="fas fa-stethoscope"></i> SEO Audit</div>
         </div>
-        <div class="form-row">
+        <div class="form-row-3">
           <div class="form-group">
             <label class="form-label">URL to Audit</label>
             <input type="text" class="form-input" id="auditUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') runAudit()">
@@ -1081,6 +1081,16 @@ tr:hover td { background: var(--bg-input); }
           <div class="form-group">
             <label class="form-label">Focus Keyword (optional)</label>
             <input type="text" class="form-input" id="auditKeyword" placeholder="target keyword">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Page Type</label>
+            <select class="form-select" id="auditPageType">
+              <option value="auto">🔍 Auto-detect from URL</option>
+              <option value="generic">📄 General Page</option>
+              <option value="homepage">🏠 Homepage / Main Page</option>
+              <option value="product">🛒 Product / Service Page</option>
+              <option value="blog">📝 Blog / Article Page</option>
+            </select>
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;">
@@ -1108,7 +1118,8 @@ tr:hover td { background: var(--bg-input); }
           </button>
         </div>
         <div class="form-group">
-          <label class="form-label">Upload CSV (columns: url, keyword)</label>
+          <label class="form-label">Upload CSV (columns: url, keyword, page_type)</label>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Optional columns: keyword, page_type (homepage/product/blog/generic/auto)</div>
           <input type="file" class="form-input" id="batchFile" accept=".csv" onchange="handleBatchFile(event)">
         </div>
         <div id="batchFileInfo" style="display:none;margin-bottom:12px;"></div>
@@ -1799,7 +1810,7 @@ async function runAudit() {
   try {
     const data = await api('/api/audit', {
       method: 'POST',
-      body: JSON.stringify({ url, keyword: document.getElementById('auditKeyword').value.trim() })
+      body: JSON.stringify({ url, keyword: document.getElementById('auditKeyword').value.trim(), page_type: document.getElementById('auditPageType').value })
     });
     hideLoading();
     if (data.error && !data.score) { toast(data.error, 'error'); return; }
@@ -1837,8 +1848,35 @@ function renderAuditResults(data) {
 
   const images = data.images || {};
   const links = data.links || {};
+  const ptInfo = data.page_type_info || {};
+  const ptInsights = data.page_type_insights || {};
+  const pageTypeIcons = { homepage: '🏠', product: '🛒', blog: '📝', generic: '📄' };
 
-  container.innerHTML = `
+  // Page-type insights card
+  let insightsHtml = '';
+  if (ptInsights.label) {
+    const focusHtml = (ptInsights.focus_areas || []).map(f => `<li style="margin:3px 0;">${escapeHtml(f)}</li>`).join('');
+    const recsHtml = (ptInsights.recommendations || []).map(r => `<div class="issue-item warning" style="margin-bottom:6px;"><span class="issue-icon">💡</span><div>${escapeHtml(r)}</div></div>`).join('');
+    insightsHtml = `
+      <div class="card" style="border-left:4px solid var(--accent);">
+        <div class="card-header">
+          <div class="card-title"><span style="font-size:1.2rem;">${pageTypeIcons[data.page_type] || '📄'}</span> ${escapeHtml(ptInsights.label)}</div>
+          <span class="badge badge-purple">${data.page_type}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div class="form-label" style="margin-bottom:8px;">Focus Areas</div>
+            <ul style="list-style:none;padding:0;font-size:0.88rem;">${focusHtml || '<li style="color:var(--text-muted);">Standard SEO checks</li>'}</ul>
+          </div>
+          <div>
+            <div class="form-label" style="margin-bottom:8px;">Recommendations</div>
+            ${recsHtml || '<div style="font-size:0.88rem;color:var(--success);">✅ No page-type-specific issues</div>'}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  container.innerHTML = insightsHtml + `
     <div class="metrics-row">
       <div class="metric-card" style="display:flex;flex-direction:column;align-items:center;">
         <div class="score-circle ${scoreClass}"><span class="score-value">${score}</span><span class="score-label">${scoreLabel}</span></div>

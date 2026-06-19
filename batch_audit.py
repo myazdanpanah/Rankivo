@@ -11,16 +11,18 @@ from seo_audit import audit_url
 
 def parse_csv_urls(csv_content: str) -> list[dict]:
     """
-    Parse a CSV string containing URLs and optional keywords.
-    Expected columns: url, keyword (keyword is optional).
+    Parse a CSV string containing URLs and optional keywords/page_type.
+    Expected columns: url, keyword (optional), page_type (optional).
+    Valid page_type values: homepage, product, blog, generic, auto.
     """
     reader = csv.DictReader(io.StringIO(csv_content))
     entries = []
     for row in reader:
         url = row.get("url", "").strip()
         keyword = row.get("keyword", "").strip() if "keyword" in row else ""
+        page_type = row.get("page_type", "generic").strip() if "page_type" in row else "generic"
         if url:
-            entries.append({"url": url, "keyword": keyword})
+            entries.append({"url": url, "keyword": keyword, "page_type": page_type})
     return entries
 
 
@@ -33,7 +35,7 @@ def batch_audit(urls: list[dict], max_workers: int = 3, delay: float = 1.0) -> l
     results = []
 
     def _audit_entry(entry):
-        result = audit_url(entry["url"], entry.get("keyword", ""))
+        result = audit_url(entry["url"], entry.get("keyword", ""), entry.get("page_type", "generic"))
         return result
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -149,4 +151,4 @@ def generate_comparison_markdown(results: list[dict]) -> str:
 
 def generate_sample_csv() -> str:
     """Generate a sample CSV template for users."""
-    return "url,keyword\nhttps://example.com,example keyword\nhttps://example.com/about,about us\n"
+    return "url,keyword,page_type\nhttps://example.com,example keyword,homepage\nhttps://example.com/about,about us,generic\nhttps://example.com/product/widget,buy widget,product\nhttps://example.com/blog/seo-tips,seo tips,blog\n"

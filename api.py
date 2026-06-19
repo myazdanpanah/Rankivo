@@ -254,7 +254,8 @@ def api_audit():
         if not url:
             return jsonify({"error": "URL is required"}), 400
 
-        result = audit_url(url, keyword)
+        page_type = data.get("page_type", "generic")
+        result = audit_url(url, keyword, page_type)
 
         if not result.get("error"):
             db_save_audit(result)
