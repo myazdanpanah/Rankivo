@@ -29,7 +29,7 @@ from database import (
 )
 from seo_recommendations import analyze_audit_for_recommendations, generate_quick_wins
 from notifications import send_email, send_slack_message, get_upcoming_deadlines, send_deadline_email, send_deadline_slack
-from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY
+from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY, PORT
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = SECRET_KEY
@@ -102,7 +102,7 @@ def api_auth_check():
 
 @app.route("/")
 def index():
-    return send_file("static/index.html")
+    return send_from_directory(app.static_folder, "index.html")
 
 
 @app.route("/favicon.ico")
@@ -656,5 +656,5 @@ def api_notify_deadlines():
 
 
 if __name__ == "__main__":
-    print("🚀 Rankivo Web UI starting at http://localhost:5000")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    print(f"Rankivo Web UI starting at http://localhost:{PORT}")
+    app.run(debug=True, host="0.0.0.0", port=PORT)

@@ -1,8 +1,8 @@
 # 🔍 Rankivo — SEO AI Tools
 
-A powerful, all-in-one Python SEO toolkit with a Streamlit web dashboard. Research keywords, build content clusters, generate AI articles, audit websites, track performance, and plan your editorial calendar — all from free sources with a pluggable AI backend.
+A powerful, all-in-one Python SEO toolkit with a **modern web dashboard**. Research keywords, build content clusters, generate AI articles, audit websites, track performance, and plan your editorial calendar — all from free sources with a pluggable AI backend.
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-optional-blue) ![License](https://img.shields.io/badge/License-MIT-green)
+![Python](https://img.shields.io/badge/Python-3.10+-blue) ![Flask](https://img.shields.io/badge/Flask-3.0+-green) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-optional-blue) ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
@@ -11,7 +11,7 @@ A powerful, all-in-one Python SEO toolkit with a Streamlit web dashboard. Resear
 | Feature | Description |
 |---|---|
 | **📊 Keyword Research** | Google autocomplete suggestions, modifier expansion, People Also Ask, related searches, SERP analysis, search intent classification |
-| **🗺️ Pillar-Cluster Map** | Auto-groups keywords into topic clusters, identifies pillar vs. cluster articles, generates a full content plan with Plotly visualizations |
+| **🗺️ Pillar-Cluster Map** | Auto-groups keywords into topic clusters, identifies pillar vs. cluster articles, generates a full content plan with interactive charts |
 | **✍️ Article Generator** | Creates full SEO-optimized articles (Markdown) with H1/H3 structure, keyword placement, internal link suggestions |
 | **🔍 SEO Audit** | Analyzes any URL — meta tags, headings hierarchy, word count, keyword density, internal/external links, image alt text, SEO score (0-100) |
 | **📋 Batch Audit** | Upload a CSV of URLs, audit them concurrently, get comparison tables and charts |
@@ -20,6 +20,9 @@ A powerful, all-in-one Python SEO toolkit with a Streamlit web dashboard. Resear
 | **🧠 AI Recommendations** | AI-powered SEO recommendations that analyze audit results and suggest specific fixes |
 | **🔔 Notifications** | Email and Slack webhook alerts for upcoming content calendar deadlines |
 | **📜 Audit History** | Full audit history stored in the database for trend analysis |
+| **🔐 Authentication** | Simple token-based login system to protect the dashboard |
+| **📄 PDF Export** | One-click PDF audit report generation with full SEO breakdown |
+| **📊 CSV Export** | Download keyword research data as CSV with keyword, source, and intent columns |
 
 ---
 
@@ -43,14 +46,34 @@ cp .env.example .env
 ### 3. Run
 
 ```bash
-streamlit run app.py
+python app.py
 ```
 
-Opens at **http://localhost:8501**
+Opens at **http://localhost:5500**
+
+**Default login:** `admin` / `rankivo`
 
 ---
 
 ## ⚙️ Configuration
+
+### Authentication
+
+By default, the dashboard is protected with a simple login system:
+
+| Setting | Default | Description |
+|---|---|---|
+| `ADMIN_USERNAME` | `admin` | Login username |
+| `ADMIN_PASSWORD` | `rankivo` | Login password |
+| `SECRET_KEY` | auto-generated | Token signing key (set a stable value in production) |
+
+Set via environment variables or in `.env`:
+
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-password
+SECRET_KEY=your-random-secret-key
+```
 
 ### AI Providers
 
@@ -102,8 +125,9 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../xxx
 
 ```
 Rankivo/
-├── app.py                  # Streamlit dashboard (main entry point, 9 tabs)
-├── config.py               # API keys, database URL, notification settings
+├── app.py                  # Flask entry point (run this)
+├── api.py                  # REST API backend (auth, endpoints, exports)
+├── config.py               # API keys, database URL, auth & notification settings
 ├── database.py             # PostgreSQL + SQLite persistence layer
 ├── keyword_research.py     # Google autocomplete, SERP scraping, intent classification
 ├── pillar_cluster.py       # Keyword clustering, content planning
@@ -114,6 +138,8 @@ Rankivo/
 ├── content_calendar.py     # Editorial calendar with JSON file storage
 ├── seo_recommendations.py  # AI-powered SEO recommendations + quick wins
 ├── notifications.py        # Email and Slack webhook notifications
+├── static/
+│   └── index.html          # Modern SPA dashboard (sidebar nav, charts, dark mode)
 ├── requirements.txt        # Python dependencies
 ├── .env.example            # Environment variable template
 ├── .gitignore              # Git ignore rules
@@ -132,18 +158,42 @@ Rankivo/
 6. **Track keywords** → Save snapshots over time, visualize trends, persist in PostgreSQL/SQLite
 7. **Plan content** → Generate editorial calendar from pillar-cluster plans, track status
 8. **Get recommendations** → AI analyzes your audit and suggests specific fixes
-9. **Stay notified** → Email/Slack alerts for upcoming content deadlines
+9. **Export reports** → Download PDF audit reports and CSV keyword data
+10. **Stay notified** → Email/Slack alerts for upcoming content deadlines
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Streamlit + Plotly (interactive charts)
-- **Backend:** Python 3.10+
+- **Frontend:** HTML5 / CSS3 / Vanilla JS (SPA), Chart.js, Font Awesome, Marked.js
+- **Backend:** Python 3.10+, Flask, Flask-CORS
 - **AI:** Ollama (local), OpenAI, Anthropic Claude, Google Gemini (pluggable)
 - **Database:** PostgreSQL (optional) + SQLite (default)
+- **Exports:** ReportLab (PDF), Python csv module (CSV)
 - **Scraping:** Google Autocomplete API, BeautifulSoup, googlesearch-python
 - **Notifications:** SMTP email, Slack webhooks
+
+---
+
+## 🔌 API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/auth/login` | POST | Login and get auth token |
+| `/api/auth/logout` | POST | Logout and invalidate token |
+| `/api/auth/check` | GET | Check if token is valid |
+| `/api/keyword-research` | POST | Run keyword research |
+| `/api/keyword-research/export-csv` | POST | Export keywords as CSV |
+| `/api/pillar-cluster` | POST | Build pillar-cluster map |
+| `/api/article/generate` | POST | Generate SEO article |
+| `/api/audit` | POST | Run SEO audit on a URL |
+| `/api/audit/export-pdf` | POST | Export audit as PDF report |
+| `/api/batch-audit` | POST | Run batch audit from CSV |
+| `/api/tracking` | GET/POST | Manage keyword tracking |
+| `/api/calendar` | GET/POST | Manage content calendar |
+| `/api/recommendations` | POST | Generate AI recommendations |
+| `/api/audit-history` | GET | View past audit results |
+| `/api/notifications/test-email` | POST | Test email notifications |
 
 ---
 
@@ -153,6 +203,7 @@ Rankivo/
 - **Ollama** requires ~8GB+ RAM for LLaMA 3. Smaller models work on less RAM.
 - Keyword research results are cached in the session for faster repeat searches.
 - The tool uses heuristic intent classification — for production use, consider integrating a paid keyword data API.
+- Auth tokens are stored in-memory — they reset when the server restarts.
 
 ---
 
