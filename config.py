@@ -59,4 +59,4 @@ NOTIFICATION_DAYS_BEFORE = int(os.getenv("NOTIFICATION_DAYS_BEFORE", "3"))
 # Leave empty to disable authentication (open access).
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "rankivo")
-SECRET_KEY = os.getenv("SECRET_KEY", os.urandom(32).hex())
+SECRET_KEY = os.getenv("SECRET_KEY", "rankivo-change-me-in-production")

@@ -114,6 +114,7 @@ def favicon():
 # Config & Status
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/status")
 def api_status():
     providers = get_available_providers()
@@ -128,6 +129,7 @@ def api_status():
 # 1. Keyword Research
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/keyword-research", methods=["POST"])
 def api_keyword_research():
     try:
@@ -147,6 +149,7 @@ def api_keyword_research():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/keyword-research", methods=["GET"])
 def api_get_keyword_data():
     session = _get_session()
@@ -160,6 +163,7 @@ def api_get_keyword_data():
 # 2. Pillar-Cluster
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/pillar-cluster", methods=["POST"])
 def api_pillar_cluster():
     try:
@@ -178,6 +182,7 @@ def api_pillar_cluster():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/pillar-cluster", methods=["GET"])
 def api_get_cluster_map():
     session = _get_session()
@@ -191,6 +196,7 @@ def api_get_cluster_map():
 # 3. Article Generation
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/article/generate", methods=["POST"])
 def api_generate_article():
     try:
@@ -227,6 +233,7 @@ def api_generate_article():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/article/providers")
 def api_providers():
     return jsonify({"providers": get_available_providers(), "default": DEFAULT_AI_PROVIDER})
@@ -236,6 +243,7 @@ def api_providers():
 # 4. SEO Audit
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/audit", methods=["POST"])
 def api_audit():
     try:
@@ -262,6 +270,7 @@ def api_audit():
 # 5. Batch Audit
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/batch-audit", methods=["POST"])
 def api_batch_audit():
     try:
@@ -285,6 +294,7 @@ def api_batch_audit():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/batch-audit/sample-csv")
 def api_sample_csv():
     return jsonify({"csv": generate_sample_csv()})
@@ -294,11 +304,13 @@ def api_sample_csv():
 # 6. Keyword Tracking
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/tracking", methods=["GET"])
 def api_get_tracked():
     return jsonify({"tracked": db_get_tracked_keywords()})
 
 
+@require_auth
 @app.route("/api/tracking", methods=["POST"])
 def api_track_keyword():
     try:
@@ -324,12 +336,14 @@ def api_track_keyword():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/tracking/<keyword>", methods=["DELETE"])
 def api_delete_tracked(keyword):
     db_delete_keyword(keyword)
     return jsonify({"success": True})
 
 
+@require_auth
 @app.route("/api/tracking/<keyword>/history")
 def api_keyword_history(keyword):
     history = db_get_keyword_history(keyword)
@@ -340,6 +354,7 @@ def api_keyword_history(keyword):
 # 7. Content Calendar
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/calendar", methods=["GET"])
 def api_get_calendar():
     events = db_load_calendar_events()
@@ -347,6 +362,7 @@ def api_get_calendar():
     return jsonify({"events": events, "stats": stats})
 
 
+@require_auth
 @app.route("/api/calendar", methods=["POST"])
 def api_generate_calendar():
     try:
@@ -362,6 +378,7 @@ def api_generate_calendar():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/calendar/<event_id>", methods=["PATCH"])
 def api_update_event(event_id):
     try:
@@ -374,12 +391,14 @@ def api_update_event(event_id):
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/calendar/<event_id>", methods=["DELETE"])
 def api_delete_event(event_id):
     db_delete_event(event_id)
     return jsonify({"success": True})
 
 
+@require_auth
 @app.route("/api/calendar/export/<fmt>")
 def api_export_calendar(fmt):
     events = db_load_calendar_events()
@@ -394,6 +413,7 @@ def api_export_calendar(fmt):
 # 8. AI Recommendations
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/recommendations", methods=["POST"])
 def api_recommendations():
     try:
@@ -411,6 +431,7 @@ def api_recommendations():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/recommendations/quick-wins")
 def api_quick_wins():
     session = _get_session()
@@ -426,6 +447,7 @@ def api_quick_wins():
 # 9. Audit History
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/audit-history")
 def api_audit_history():
     limit = request.args.get("limit", 50, type=int)
@@ -437,6 +459,7 @@ def api_audit_history():
 # 10. PDF Export (Audit Report)
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/audit/export-pdf", methods=["POST"])
 def api_export_audit_pdf():
     try:
@@ -551,6 +574,7 @@ def api_export_audit_pdf():
 # 11. CSV Export (Keyword Research)
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/keyword-research/export-csv", methods=["POST"])
 def api_export_keywords_csv():
     try:
@@ -590,6 +614,7 @@ def api_export_keywords_csv():
 # 12. Notifications
 # ──────────────────────────────────────────────
 
+@require_auth
 @app.route("/api/notifications/test-email", methods=["POST"])
 def api_test_email():
     try:
@@ -608,6 +633,7 @@ def api_test_email():
         return jsonify({"error": str(e)}), 500
 
 
+@require_auth
 @app.route("/api/notifications/deadlines", methods=["POST"])
 def api_notify_deadlines():
     try:
