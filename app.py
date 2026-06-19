@@ -14,7 +14,7 @@ from pillar_cluster import build_pillar_cluster_map
 from content_generator import generate_article, get_available_providers
 from seo_audit import audit_url
 from batch_audit import parse_csv_urls, batch_audit, generate_comparison_table, generate_comparison_markdown, generate_sample_csv
-from keyword_tracker import track_keyword
+
 from content_calendar import (
     create_events_from_content_plan, get_calendar_stats,
     export_calendar_markdown, export_calendar_json, STATUS_COLORS,
