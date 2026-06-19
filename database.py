@@ -152,7 +152,8 @@ def db_track_keyword(keyword: str, snapshot: dict):
             (keyword, snapshot_json),
         )
     conn.commit()
-    conn.close()
+    if db_type != "pg":
+        conn.close()
 
 
 def db_get_tracked_keywords() -> list[dict]:
@@ -217,7 +218,8 @@ def db_get_keyword_history(keyword: str) -> list[dict]:
         snap = json.loads(row["snapshot"])
         snap["date"] = row["created_at"][:10] if row["created_at"] else ""
         results.append(snap)
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return results
 
 
@@ -231,7 +233,8 @@ def db_delete_keyword(keyword: str) -> bool:
         cursor.execute("DELETE FROM keyword_snapshots WHERE keyword = ?", (keyword,))
     deleted = cursor.rowcount > 0
     conn.commit()
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return deleted
 
 
@@ -266,7 +269,8 @@ def db_save_calendar_events(events: list[dict]):
                  e.get("status", "planned"), e.get("color", "#6c757d")),
             )
     conn.commit()
-    conn.close()
+    if db_type != "pg":
+        conn.close()
 
 
 def db_load_calendar_events() -> list[dict]:
@@ -287,7 +291,8 @@ def db_load_calendar_events() -> list[dict]:
             "status": row["status"],
             "color": row["color"],
         })
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return events
 
 
@@ -303,7 +308,8 @@ def db_update_event_status(event_id: str, new_status: str, color: str = "") -> b
                        (new_status, color, event_id))
     updated = cursor.rowcount > 0
     conn.commit()
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return updated
 
 
@@ -317,7 +323,8 @@ def db_delete_event(event_id: str) -> bool:
         cursor.execute("DELETE FROM calendar_events WHERE id = ?", (event_id,))
     deleted = cursor.rowcount > 0
     conn.commit()
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return deleted
 
 
@@ -347,7 +354,8 @@ def db_save_audit(audit_result: dict):
             (url, score, wc, issues_count, full_json),
         )
     conn.commit()
-    conn.close()
+    if db_type != "pg":
+        conn.close()
 
 
 def db_get_audit_history(limit: int = 50) -> list[dict]:
@@ -361,7 +369,8 @@ def db_get_audit_history(limit: int = 50) -> list[dict]:
         () if db_type == "pg" else (limit,),
     )
     results = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return results
 
 

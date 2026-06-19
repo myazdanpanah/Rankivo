@@ -427,7 +427,7 @@ with tab8:
         st.subheader("🤖 AI-Powered Analysis")
         if st.button("🧠 Generate AI Recommendations", type="primary", key="btn_recs"):
             with st.spinner("Analyzing with AI..."):
-                recs = analyze_audit_for_recommendations(audit_rec)
+                recs = analyze_audit_for_recommendations(audit_rec, provider=selected_provider)
                 st.session_state["seo_recommendations"] = recs
 
         recs = st.session_state.get("seo_recommendations")
