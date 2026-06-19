@@ -10,12 +10,12 @@ echo.
 
 cd /d "%~dp0"
 
-REM --- Find the best Python with Flask installed ---
+REM --- Find the best Python ---
 set "PYTHON="
 
-REM 1) Try the local Python 3.14 (has Flask from earlier install)
+REM 1) Try the local Python 3.14
 if exist "%LOCALAPPDATA%\Python\bin\python.exe" (
-    "%LOCALAPPDATA%\Python\bin\python.exe" -c "import flask" >nul 2>&1
+    "%LOCALAPPDATA%\Python\bin\python.exe" --version >nul 2>&1
     if not errorlevel 1 (
         set "PYTHON=%LOCALAPPDATA%\Python\bin\python.exe"
     )
@@ -29,7 +29,7 @@ if "%PYTHON%"=="" (
         "%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe"
     ) do (
         if "%PYTHON%"=="" (
-            %%P -c "import flask" >nul 2>&1
+            %%P --version >nul 2>&1
             if not errorlevel 1 (
                 set "PYTHON=%%~P"
             )
@@ -39,18 +39,16 @@ if "%PYTHON%"=="" (
 
 REM 3) Try system PATH python
 if "%PYTHON%"=="" (
-    python -c "import flask" >nul 2>&1
+    python --version >nul 2>&1
     if not errorlevel 1 (
         set "PYTHON=python"
     )
 )
 
-REM --- Check if we found Python with Flask ---
+REM --- Check if we found Python ---
 if "%PYTHON%"=="" (
-    echo  [ERROR] Could not find a Python with Flask installed.
-    echo.
-    echo  Install Flask with:
-    echo    python -m pip install -r requirements.txt
+    echo  [ERROR] Python not found.
+    echo  Install Python 3.10+ from https://www.python.org/downloads/
     echo.
     pause
     exit /b 1
@@ -58,6 +56,28 @@ if "%PYTHON%"=="" (
 
 echo  Using: %PYTHON%
 echo.
+
+REM --- Auto-install dependencies if Flask is missing ---
+"%PYTHON%" -c "import flask" >nul 2>&1
+if errorlevel 1 (
+    echo  [SETUP] Flask not found — installing dependencies...
+    echo.
+    "%PYTHON%" -m pip install -r requirements.txt
+    if errorlevel 1 (
+        echo.
+        echo  [ERROR] Failed to install dependencies.
+        echo  Try manually: "%PYTHON%" -m pip install -r requirements.txt
+        echo.
+        pause
+        exit /b 1
+    )
+    echo.
+    echo  [OK] Dependencies installed successfully.
+    echo.
+) else (
+    echo  [OK] Dependencies are up to date.
+    echo.
+)
 
 REM --- Check if port 5500 is already in use ---
 netstat -an | findstr ":5500" | findstr "LISTENING" >nul 2>&1
