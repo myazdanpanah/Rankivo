@@ -1322,9 +1322,21 @@ tr:hover td { background: var(--bg-input); }
               <span style="color:var(--text-secondary);" data-i18n="aiProviderLabel">AI Provider</span>
               <span class="badge badge-purple" id="aiStatus">—</span>
             </div>
-            <div style="padding:8px 0; display:flex; justify-content:space-between;">
+            <div style="padding:8px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
               <span style="color:var(--text-secondary);" data-i18n="defaultAiLabel">Default AI</span>
               <span class="badge badge-info" id="defaultAi">—</span>
+            </div>
+            <div style="padding:8px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
+              <span style="color:var(--text-secondary);"><i class="fas fa-brain" style="color:#8b5cf6;"></i> Ollama</span>
+              <span class="badge" id="llmOllamaStatus">—</span>
+            </div>
+            <div style="padding:8px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
+              <span style="color:var(--text-secondary);"><i class="fas fa-cube" style="color:#8b5cf6;"></i> Embedding</span>
+              <span class="badge badge-info" id="llmEmbedModel">—</span>
+            </div>
+            <div style="padding:8px 0; display:flex; justify-content:space-between;">
+              <span style="color:var(--text-secondary);"><i class="fas fa-project-diagram" style="color:#8b5cf6;"></i> <span data-i18n="llmCapabilities">LLM Capabilities</span></span>
+              <span id="llmCapabilities" style="display:flex;gap:4px;flex-wrap:wrap;"></span>
             </div>
           </div>
         </div>
@@ -2345,8 +2357,10 @@ const TRANSLATIONS = {
     failed: 'Failed',
     noClusterArticles: 'No articles found in the content plan.',
     useLlmIntel: 'Use LLM Intelligence',
+    llmCapabilities: 'LLM Capabilities',
     keywordDifficulty: 'Keyword Difficulty',
     useSemanticClustering: 'Semantic (LLM)',
+    llmCapabilities: 'قابلیت‌های هوش مصنوعی',
     technicalSeoTitle: 'سئوی فنی',
     fullTechnicalAudit: 'احتمام کامل سئوی فنی',
     techOverallScore: 'امتیاز کلی',
@@ -2741,6 +2755,31 @@ async function loadDashboard() {
       document.getElementById('dashClusterCount').textContent = state.clusterMap.stats.total_clusters;
     }
   } catch(e) { console.error('Dashboard load error:', e); }
+
+  // Load LLM status
+  try {
+    const llmRes = await api('/api/llm-intel/status');
+    const ollamaEl = document.getElementById('llmOllamaStatus');
+    const embedEl = document.getElementById('llmEmbedModel');
+    const capsEl = document.getElementById('llmCapabilities');
+    if (llmRes.ollama_running) {
+      ollamaEl.className = 'badge badge-success';
+      ollamaEl.textContent = 'Connected';
+    } else {
+      ollamaEl.className = 'badge badge-danger';
+      ollamaEl.textContent = 'Offline';
+    }
+    embedEl.textContent = llmRes.has_embedding_model ? 'nomic-embed-text' : 'TF-IDF fallback';
+    const caps = llmRes.capabilities || {};
+    let capsHtml = '';
+    if (caps.intent_classification) capsHtml += '<span class="badge badge-success" style="font-size:0.7rem;"><i class="fas fa-check"></i> Intent</span>';
+    else capsHtml += '<span class="badge badge-danger" style="font-size:0.7rem;"><i class="fas fa-times"></i> Intent</span>';
+    if (caps.semantic_clustering) capsHtml += '<span class="badge badge-success" style="font-size:0.7rem;"><i class="fas fa-check"></i> Clustering</span>';
+    else capsHtml += '<span class="badge badge-warning" style="font-size:0.7rem;"><i class="fas fa-exclamation"></i> Clustering</span>';
+    if (caps.difficulty_estimation) capsHtml += '<span class="badge badge-success" style="font-size:0.7rem;"><i class="fas fa-check"></i> Difficulty</span>';
+    else capsHtml += '<span class="badge badge-danger" style="font-size:0.7rem;"><i class="fas fa-times"></i> Difficulty</span>';
+    capsEl.innerHTML = capsHtml;
+  } catch(e) { console.log('LLM status load error:', e); }
 }
 
 let dashChart = null;
@@ -2899,6 +2938,7 @@ async function runKeywordResearch() {
     if (data.error) { toast(data.error, 'error'); return; }
 
     state.keywordData = data;
+    try { localStorage.setItem('rankivo_kw_data', JSON.stringify(data)); } catch(e) {}
     document.getElementById('kwResults').style.display = 'block';
     document.getElementById('btnTrackKw').style.display = 'inline-flex';
     document.getElementById('btnExportCsv').style.display = 'inline-flex';
@@ -3114,6 +3154,19 @@ async function trackCurrentKeyword() {
    Pillar-Cluster
    ══════════════════════════════════════════════ */
 function updateClusterForm() {
+  // Try to restore keyword data from localStorage if not in memory
+  if (!state.keywordData) {
+    try {
+      var saved = localStorage.getItem('rankivo_kw_data');
+      if (saved) { state.keywordData = JSON.parse(saved); }
+    } catch(e) {}
+  }
+  if (!state.clusterMap) {
+    try {
+      var savedCluster = localStorage.getItem('rankivo_cluster_data');
+      if (savedCluster) { state.clusterMap = JSON.parse(savedCluster); }
+    } catch(e) {}
+  }
   document.getElementById('clusterNoData').style.display = state.keywordData ? 'none' : 'block';
   document.getElementById('clusterForm').style.display = state.keywordData ? 'block' : 'none';
 }
@@ -3192,6 +3245,7 @@ async function buildClusterMap() {
     }
 
     state.clusterMap = data;
+    try { localStorage.setItem('rankivo_cluster_data', JSON.stringify(data)); } catch(e) {}
     document.getElementById('clusterResults').style.display = 'block';
 
     // Metrics
@@ -4213,7 +4267,18 @@ async function loadAuditHistory() {
    ══════════════════════════════════════════════ */
 (async function init() {
   await checkAuth();
-  if (authToken) loadDashboard();
+  if (authToken) {
+    // Restore keyword/cluster data from localStorage
+    try {
+      var savedKw = localStorage.getItem('rankivo_kw_data');
+      if (savedKw) { state.keywordData = JSON.parse(savedKw); }
+    } catch(e) {}
+    try {
+      var savedCluster = localStorage.getItem('rankivo_cluster_data');
+      if (savedCluster) { state.clusterMap = JSON.parse(savedCluster); }
+    } catch(e) {}
+    loadDashboard();
+  }
 })();
 
 /* ══════════════════════════════════════════════
