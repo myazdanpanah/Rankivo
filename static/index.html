@@ -4459,7 +4459,24 @@ async function analyzeContentGap() {
   const competitorUrls = competitorsText ? competitorsText.split('\n').map(u => u.trim()).filter(u => u) : [];
   const myKeywords = myKeywordsText ? myKeywordsText.split('\n').map(k => k.trim()).filter(k => k) : [];
 
-  showLoading('Analyzing competitor content...');
+  // Show floating progress indicator
+  var progressEl = document.createElement('div');
+  progressEl.id = 'gapProgress';
+  progressEl.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.88rem;display:flex;align-items:center;gap:10px;min-width:280px;animation:fadeIn 0.3s ease;';
+  progressEl.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span><span id="gapProgressText">Starting analysis...</span>';
+  document.body.appendChild(progressEl);
+
+  var steps = ['Discovering competitors...', 'Fetching page content...', 'Extracting keywords...', 'Comparing keyword sets...', 'Calculating opportunity scores...'];
+  var stepIdx = 0;
+  var progressInterval = setInterval(function() {
+    var el = document.getElementById('gapProgressText');
+    if (el && stepIdx < steps.length) {
+      el.textContent = steps[stepIdx++];
+    } else if (el) {
+      el.textContent = 'Almost done...';
+    }
+  }, 5000);
+
   document.getElementById('btnGapAnalyze').disabled = true;
 
   try {
@@ -4473,15 +4490,20 @@ async function analyzeContentGap() {
         max_competitors: 5,
       })
     });
-    hideLoading();
+    clearInterval(progressInterval);
+    var progEl = document.getElementById('gapProgress');
+    if (progEl) progEl.remove();
     document.getElementById('btnGapAnalyze').disabled = false;
 
     if (data.error) { toast(data.error, 'error'); return; }
 
     gapData = data;
     renderGapResults(data);
+    toast('Found ' + (data.summary?.total_gaps || 0) + ' content gaps', 'success');
   } catch(e) {
-    hideLoading();
+    clearInterval(progressInterval);
+    var progEl = document.getElementById('gapProgress');
+    if (progEl) progEl.remove();
     document.getElementById('btnGapAnalyze').disabled = false;
     toast('Content gap analysis failed: ' + e.message, 'error');
   }

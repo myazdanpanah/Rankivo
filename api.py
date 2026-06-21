@@ -1116,7 +1116,49 @@ def api_pipeline_run():
         cluster_result = build_pillar_cluster_map(kw_data, cluster_threshold=data.get("threshold", 0.30))
         session["cluster_map"] = cluster_result
         
-        # Step 3: AI Analysis — rank the content plan and suggest which articles to write first
+        # Step 2.5: Content Gap Analysis (optional, best-effort)
+        run_gap = data.get("run_gap_analysis", False)
+        gap_analysis = {"status": "skipped"}
+        if run_gap:
+            try:
+                # Use all collected keywords as "my keywords" for gap comparison
+                my_kw_list = (
+                    kw_data.get("suggestions", [])
+                    + kw_data.get("modifier_expanded", [])
+                    + kw_data.get("related_searches", [])
+                )
+                gap_result = content_gap.run_content_gap_analysis(
+                    seed_keyword=seed,
+                    my_keywords=my_kw_list,
+                    num_serp_results=3,
+                    max_competitors=3,
+                )
+                if gap_result.get("gap_analysis", {}).get("gap_keywords"):
+                    gap_analysis = {
+                        "total_gaps": gap_result["summary"].get("total_gaps", 0),
+                        "top_gaps": gap_result["gap_analysis"]["gap_keywords"][:10],
+                        "coverage": gap_result["gap_analysis"].get("coverage_percentage", 0),
+                        "status": "success",
+                    }
+                    # Add gap keywords to content plan as suggested articles
+                    for gap_kw in gap_result["gap_analysis"]["gap_keywords"][:5]:
+                        cluster_result.setdefault("content_plan", []).append({
+                            "pillar_keyword": gap_kw["keyword"],
+                            "pillar_title": f"Content Gap: {gap_kw['keyword'].title()}",
+                            "pillar_intent": "informational",
+                            "articles": [{
+                                "keyword": gap_kw["keyword"],
+                                "intent": "informational",
+                                "suggested_title": f"{gap_kw['keyword'].title()}: A Comprehensive Guide",
+                            }],
+                            "total_content_pieces": 1,
+                            "source": "content_gap",
+                        })
+            except Exception as e:
+                gap_analysis = {"status": "error", "error": str(e)}
+                print(f"[pipeline] Gap analysis failed: {e}")
+
+                # Step 3: AI Analysis — rank the content plan and suggest which articles to write first
         ai_analysis = {}
         content_plan = cluster_result.get("content_plan", [])
         
@@ -1206,6 +1248,7 @@ Return your analysis as JSON with keys: pillar_priorities (list of pillar topics
             "cluster_map": cluster_result,
             "content_plan": content_plan,
             "ai_analysis": ai_analysis,
+            "gap_analysis": gap_analysis,
             "stats": {
                 "total_keywords": len(kw_data.get("suggestions", [])) + len(kw_data.get("modifier_expanded", [])),
                 "total_clusters": cluster_result["stats"]["total_clusters"],
