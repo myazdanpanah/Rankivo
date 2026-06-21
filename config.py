@@ -77,6 +77,20 @@ SUPPORTED_LANGUAGES = {
     "fa": "فارسی (Persian)",
 }
 
+# --- Serper API Settings (Optional — for enhanced keyword difficulty) ---
+# Get a free key at https://serper.dev (2500 queries/mo free)
+SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
+
+# --- LLM Keyword Intelligence Settings ---
+# Embedding model for semantic clustering (via Ollama)
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+# Max keywords to estimate difficulty for (to limit API calls)
+DIFFICULTY_SAMPLE_SIZE = int(os.getenv("DIFFICULTY_SAMPLE_SIZE", "5"))
+# Use LLM for intent classification (set to "0" to disable and use heuristic fallback)
+LLM_INTENT_CLASSIFICATION = os.getenv("LLM_INTENT_CLASSIFICATION", "1") == "1"
+# Use semantic embeddings for clustering (set to "0" to use word-overlap fallback)
+SEMANTIC_CLUSTERING = os.getenv("SEMANTIC_CLUSTERING", "1") == "1"
+
 # --- Auth Settings ---
 # Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to enable login protection.
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")

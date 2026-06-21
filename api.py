@@ -15,7 +15,7 @@ from flask_cors import CORS
 
 from keyword_research import run_keyword_research
 from pillar_cluster import build_pillar_cluster_map
-from content_generator import generate_article, get_available_providers
+from content_generator import generate_article, generate_text, get_available_providers
 from seo_audit import audit_url
 from batch_audit import parse_csv_urls, batch_audit, generate_comparison_table, generate_sample_csv
 from content_calendar import (
@@ -29,10 +29,11 @@ from database import (
 )
 from seo_recommendations import analyze_audit_for_recommendations, generate_quick_wins
 from notifications import send_email, send_slack_message, get_upcoming_deadlines, send_deadline_email, send_deadline_slack
-from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY, PORT, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
+from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY, PORT, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, DIFFICULTY_SAMPLE_SIZE
 import google_trends
 import seo_bing
 import technical_seo
+import llm_keyword_intelligence as llm_intel
 from users import verify_user, create_user, delete_user, change_password, get_all_users, get_setting, set_setting, get_all_settings
 
 app = Flask(__name__, static_folder="static", static_url_path="")
@@ -1217,10 +1218,100 @@ Return your analysis as JSON with keys: pillar_priorities (list of pillar topics
 # ──────────────────────────────────────────────
 # 16. Settings
 # ──────────────────────────────────────────────
+# ──────────────────────────────────────────────
 
 # ──────────────────────────────────────────────
-# 18. Technical SEO
+# 19. LLM Keyword Intelligence
 # ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/llm-intel/status")
+def api_llm_intel_status():
+    """Check LLM keyword intelligence availability."""
+    return jsonify(llm_intel.check_llm_availability())
+
+
+@require_auth
+@app.route("/api/llm-intel/analyze", methods=["POST"])
+def api_llm_intel_analyze():
+    """
+    Run full LLM-powered keyword intelligence pipeline.
+    Accepts: keywords (list), options for intent/cluster/difficulty.
+    """
+    try:
+        data = request.json or {}
+        keywords = data.get("keywords", [])
+        if not keywords:
+            return jsonify({"error": "At least one keyword is required"}), 400
+
+        result = llm_intel.run_intelligent_keyword_analysis(
+            keywords=keywords,
+            seed=data.get("seed", ""),
+            classify_intent=data.get("classify_intent", True),
+            cluster=data.get("cluster", True),
+            estimate_difficulty=data.get("estimate_difficulty", True),
+            difficulty_sample_size=data.get("difficulty_sample_size", DIFFICULTY_SAMPLE_SIZE),
+            model=data.get("model", ""),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@require_auth
+@app.route("/api/llm-intel/intent", methods=["POST"])
+def api_llm_intel_intent():
+    """Classify intent for keywords using LLM."""
+    try:
+        data = request.json or {}
+        keywords = data.get("keywords", [])
+        if not keywords:
+            return jsonify({"error": "At least one keyword is required"}), 400
+
+        result = llm_intel.classify_intents_batch(keywords, model=data.get("model", ""))
+        return jsonify({"intent_map": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/llm-intel/cluster", methods=["POST"])
+def api_llm_intel_cluster():
+    """Cluster keywords semantically using embeddings."""
+    try:
+        data = request.json or {}
+        keywords = data.get("keywords", [])
+        if not keywords:
+            return jsonify({"error": "At least one keyword is required"}), 400
+
+        result = llm_intel.cluster_keywords_semantic(
+            keywords,
+            n_clusters=data.get("n_clusters", 0),
+            max_clusters=data.get("max_clusters", 20),
+        )
+        return jsonify({"clusters": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/llm-intel/difficulty", methods=["POST"])
+def api_llm_intel_difficulty():
+    """Estimate keyword difficulty using SERP analysis + LLM."""
+    try:
+        data = request.json or {}
+        keyword = data.get("keyword", "").strip()
+        if not keyword:
+            return jsonify({"error": "Keyword is required"}), 400
+
+        result = llm_intel.estimate_keyword_difficulty_llm(
+            keyword,
+            model=data.get("model", ""),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @require_auth
 @app.route("/api/technical/robots-txt", methods=["POST"])
