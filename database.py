@@ -57,6 +57,11 @@ def _get_connection():
     return _get_sqlite_connection(), "sqlite"
 
 
+def db_get_connection():
+    """Public wrapper to get database connection."""
+    return _get_connection()
+
+
 def init_db():
     """Create tables if they don't exist."""
     conn, db_type = _get_connection()

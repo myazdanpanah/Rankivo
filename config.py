@@ -57,9 +57,23 @@ NOTIFICATION_DAYS_BEFORE = int(os.getenv("NOTIFICATION_DAYS_BEFORE", "3"))
 # --- Server Settings ---
 PORT = int(os.getenv("PORT", "5500"))
 
+# --- Bing API Settings ---
+BING_API_KEY = os.getenv("BING_API_KEY", "")
+
+# --- Google Trends Settings ---
+GOOGLE_TRENDS_HL = os.getenv("GOOGLE_TRENDS_HL", "en-US")
+GOOGLE_TRENDS_TZ = int(os.getenv("GOOGLE_TRENDS_TZ", "360"))
+
+# --- Language / Locale Settings ---
+DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "en")
+# Supported languages: en (English), fa (Persian/Farsi)
+SUPPORTED_LANGUAGES = {
+    "en": "English",
+    "fa": "فارسی (Persian)",
+}
+
 # --- Auth Settings ---
 # Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to enable login protection.
-# Leave empty to disable authentication (open access).
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "rankivo")
 SECRET_KEY = os.getenv("SECRET_KEY", "rankivo-change-me-in-production")

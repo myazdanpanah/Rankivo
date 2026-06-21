@@ -115,40 +115,6 @@ def generate_comparison_table(results: list[dict]) -> list[dict]:
     return rows
 
 
-def generate_comparison_markdown(results: list[dict]) -> str:
-    """Generate a Markdown comparison report."""
-    lines = ["# Batch SEO Audit Report\n"]
-    lines.append(f"**URLs Analyzed:** {len(results)}\n")
-
-    # Summary table
-    lines.append("## Summary\n")
-    lines.append("| URL | Score | Words | Title | Issues |")
-    lines.append("|-----|-------|-------|-------|--------|")
-    for r in results:
-        if r.get("error") and not r.get("page_title"):
-            lines.append(f"| {r.get('url', '')} | ❌ Error | - | - | - |")
-        else:
-            url = r.get("final_url", r.get("url", ""))
-            title = r.get("page_title", "")[:40]
-            score = r.get("score", 0)
-            words = r.get("word_count", 0)
-            issues = len(r.get("issues", []))
-            lines.append(f"| {url} | {score}/100 | {words} | {title} | {issues} |")
-
-    # Top issues across all URLs
-    lines.append("\n## Common Issues\n")
-    issue_counter = {}
-    for r in results:
-        for issue in r.get("issues", []):
-            key = f"[{issue['severity'].upper()}] {issue['message']}"
-            issue_counter[key] = issue_counter.get(key, 0) + 1
-
-    for issue_text, count in sorted(issue_counter.items(), key=lambda x: -x[1])[:10]:
-        lines.append(f"- {issue_text} (found in {count} URLs)")
-
-    return "\n".join(lines)
-
-
 def generate_sample_csv() -> str:
     """Generate a sample CSV template for users."""
     return "url,keyword,page_type\nhttps://example.com,example keyword,homepage\nhttps://example.com/about,about us,generic\nhttps://example.com/product/widget,buy widget,product\nhttps://example.com/blog/seo-tips,seo tips,blog\n"

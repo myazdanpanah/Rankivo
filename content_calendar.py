@@ -3,31 +3,7 @@ SEO AI Tools - Content Calendar Module
 Generates an editorial calendar from pillar-cluster content plans.
 """
 import json
-import os
 from datetime import datetime, timedelta
-from typing import Optional
-
-
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-CALENDAR_FILE = os.path.join(DATA_DIR, "content_calendar.json")
-
-
-def _ensure_data_dir():
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-
-def _load_calendar() -> dict:
-    _ensure_data_dir()
-    if os.path.exists(CALENDAR_FILE):
-        with open(CALENDAR_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"events": []}
-
-
-def _save_calendar(data: dict):
-    _ensure_data_dir()
-    with open(CALENDAR_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 # Status colors for display
@@ -95,42 +71,6 @@ def create_events_from_content_plan(
         current_date = cluster_date + timedelta(days=2)
 
     return events
-
-
-def save_calendar_events(events: list[dict]):
-    """Save calendar events to disk."""
-    data = _load_calendar()
-    data["events"] = events
-    _save_calendar(data)
-
-
-def load_calendar_events() -> list[dict]:
-    """Load calendar events from disk."""
-    data = _load_calendar()
-    return data.get("events", [])
-
-
-def update_event_status(event_id: str, new_status: str) -> bool:
-    """Update the status of a specific event."""
-    data = _load_calendar()
-    for event in data.get("events", []):
-        if event["id"] == event_id:
-            event["status"] = new_status
-            event["color"] = STATUS_COLORS.get(new_status, "#6c757d")
-            _save_calendar(data)
-            return True
-    return False
-
-
-def delete_event(event_id: str) -> bool:
-    """Remove an event from the calendar."""
-    data = _load_calendar()
-    original_len = len(data.get("events", []))
-    data["events"] = [e for e in data.get("events", []) if e["id"] != event_id]
-    if len(data["events"]) < original_len:
-        _save_calendar(data)
-        return True
-    return False
 
 
 def get_calendar_stats(events: list[dict]) -> dict:

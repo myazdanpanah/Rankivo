@@ -124,6 +124,7 @@ def build_article_prompt(
     word_count: int = DEFAULT_ARTICLE_WORD_COUNT,
     tone: str = DEFAULT_ARTICLE_TONE,
     style: str = DEFAULT_ARTICLE_STYLE,
+    language: str = "en",
 ) -> str:
     """Build a detailed prompt for SEO article generation."""
 
@@ -147,6 +148,17 @@ def build_article_prompt(
 {snippets}
 """
 
+    # Language-specific instructions
+    if language == "fa":
+        lang_instruction = (
+            "YOU MUST WRITE THE ENTIRE ARTICLE IN PERSIAN (FARSI) LANGUAGE.\n"
+            "Use Persian (RTL) text throughout. All headings, body text, and metadata must be in Persian.\n"
+            "Use proper Persian SEO conventions and naturally incorporate Persian keywords.\n"
+            "Write in a style appropriate for Persian-speaking audiences.\n"
+        )
+    else:
+        lang_instruction = f"Write in {language} language."
+
     return f"""You are an expert SEO content writer. Write a comprehensive, engaging {style} on the topic: "{topic}".
 
 ## Requirements:
@@ -163,6 +175,7 @@ def build_article_prompt(
    - Conclusion with a call to action
 6. **Internal linking suggestions**: Mark spots with [INTERNAL LINK: topic] where internal links should go.
 7. **Write in Markdown format.**
+8. **Language**: {lang_instruction}
 {paa_section}{serp_section}
 
 Write the complete article now. Start with the H1 title on the first line.
@@ -178,6 +191,7 @@ def generate_article(
     word_count: int = DEFAULT_ARTICLE_WORD_COUNT,
     tone: str = DEFAULT_ARTICLE_TONE,
     style: str = DEFAULT_ARTICLE_STYLE,
+    language: str = "en",
 ) -> str:
     """Generate a full SEO article using the chosen AI provider."""
     prompt = build_article_prompt(
@@ -188,12 +202,20 @@ def generate_article(
         word_count=word_count,
         tone=tone,
         style=style,
+        language=language,
     )
 
-    system_prompt = (
-        "You are a world-class SEO content writer. You produce well-structured, "
-        "original, keyword-optimized content that ranks well on search engines. "
-        "You always write in Markdown format."
-    )
+    if language == "fa":
+        system_prompt = (
+            "شما یک نویسنده محتوای سئوی حرفه‌ای هستید. شما محتوای ساختاریافته، "
+            "اصیل و بهینه‌شده برای موتورهای جستجو تولید می‌کنید. "
+            "همیشه به زبان فارسی و در قالب مارک‌داون می‌نویسید."
+        )
+    else:
+        system_prompt = (
+            "You are a world-class SEO content writer. You produce well-structured, "
+            "original, keyword-optimized content that ranks well on search engines. "
+            "You always write in Markdown format."
+        )
 
     return generate_text(prompt, provider=provider, system_prompt=system_prompt)

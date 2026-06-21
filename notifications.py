@@ -177,23 +177,3 @@ def get_upcoming_deadlines(events: list[dict], days_ahead: int | None = None) ->
     return upcoming
 
 
-def check_and_notify(events: list[dict], to_email: str = "") -> dict:
-    """
-    Check for upcoming deadlines and send notifications.
-    Returns a summary of what was sent.
-    """
-    upcoming = get_upcoming_deadlines(events)
-
-    result = {
-        "upcoming_count": len(upcoming),
-        "email_sent": False,
-        "slack_sent": False,
-        "upcoming_events": upcoming,
-    }
-
-    if upcoming:
-        if to_email:
-            result["email_sent"] = send_deadline_email(upcoming, to_email) > 0
-        result["slack_sent"] = send_deadline_slack(upcoming)
-
-    return result
