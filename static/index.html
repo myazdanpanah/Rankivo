@@ -2360,6 +2360,8 @@ const TRANSLATIONS = {
     llmCapabilities: 'LLM Capabilities',
     keywordDifficulty: 'Keyword Difficulty',
     useSemanticClustering: 'Semantic (LLM)',
+    cachedData: 'Restored from local cache',
+    refresh: 'Refresh',
     llmCapabilities: 'قابلیت‌های هوش مصنوعی',
     technicalSeoTitle: 'سئوی فنی',
     fullTechnicalAudit: 'احتمام کامل سئوی فنی',
@@ -2594,6 +2596,12 @@ async function doLogout() {
   authUser = '';
   localStorage.removeItem('rankivo_token');
   localStorage.removeItem('rankivo_user');
+  // Clear cached session data
+  localStorage.removeItem('rankivo_kw_data');
+  localStorage.removeItem('rankivo_cluster_data');
+  // Clear in-memory state
+  state.keywordData = null;
+  state.clusterMap = null;
   showLoginScreen();
 }
 function showLoginScreen() {
@@ -2855,15 +2863,43 @@ function renderDashHistoryChart(history) {
 // LLM Keyword Intelligence Functions
 // ──────────────────────────────────────────────
 async function runLlmIntelligence(keywords, seed) {
+  // Show progress indicator
+  var progressEl = document.createElement('div');
+  progressEl.id = 'llmProgress';
+  progressEl.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.88rem;display:flex;align-items:center;gap:10px;animation:fadeIn 0.3s ease;';
+  progressEl.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span><span id="llmProgressText">Analyzing keywords with AI...</span>';
+  document.body.appendChild(progressEl);
+
+  var progressSteps = ['Classifying intent...', 'Building clusters...', 'Estimating difficulty...'];
+  var stepIdx = 0;
+  var progressInterval = setInterval(function() {
+    var el = document.getElementById('llmProgressText');
+    if (el && stepIdx < progressSteps.length) {
+      el.textContent = progressSteps[stepIdx++];
+    } else {
+      clearInterval(progressInterval);
+    }
+  }, 8000);
+
   try {
     const res = await fetch(API + '/api/llm-intel/analyze', {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ keywords, seed, classify_intent: true, cluster: true, estimate_difficulty: true, difficulty_sample_size: 3 })
     });
+    clearInterval(progressInterval);
+    var progEl = document.getElementById('llmProgress');
+    if (progEl) progEl.remove();
     if (!res.ok) return null;
     return await res.json();
-  } catch(e) { console.log('LLM intel error:', e); toast('LLM analysis unavailable - using fallback.', 'error'); return null; }
+  } catch(e) {
+    clearInterval(progressInterval);
+    var progEl = document.getElementById('llmProgress');
+    if (progEl) progEl.remove();
+    console.log('LLM intel error:', e);
+    toast('LLM analysis unavailable - using fallback.', 'error');
+    return null;
+  }
 }
 
 function renderKeywordDifficulty(difficulties) {
@@ -3154,21 +3190,50 @@ async function trackCurrentKeyword() {
    Pillar-Cluster
    ══════════════════════════════════════════════ */
 function updateClusterForm() {
+  var wasFromCache = false;
   // Try to restore keyword data from localStorage if not in memory
   if (!state.keywordData) {
     try {
       var saved = localStorage.getItem('rankivo_kw_data');
-      if (saved) { state.keywordData = JSON.parse(saved); }
-    } catch(e) {}
+      if (saved) { state.keywordData = JSON.parse(saved); wasFromCache = true; }
+    } catch(e) { console.warn('localStorage read error:', e); }
   }
   if (!state.clusterMap) {
     try {
       var savedCluster = localStorage.getItem('rankivo_cluster_data');
-      if (savedCluster) { state.clusterMap = JSON.parse(savedCluster); }
-    } catch(e) {}
+      if (savedCluster) { state.clusterMap = JSON.parse(savedCluster); wasFromCache = true; }
+    } catch(e) { console.warn('localStorage read error:', e); }
   }
   document.getElementById('clusterNoData').style.display = state.keywordData ? 'none' : 'block';
   document.getElementById('clusterForm').style.display = state.keywordData ? 'block' : 'none';
+
+  // Show cached data indicator
+  var cacheIndicator = document.getElementById('clusterCacheIndicator');
+  if (state.keywordData && wasFromCache) {
+    if (!cacheIndicator) {
+      cacheIndicator = document.createElement('div');
+      cacheIndicator.id = 'clusterCacheIndicator';
+      cacheIndicator.style.cssText = 'padding:8px 16px;margin-bottom:12px;background:var(--warning-bg);border:1px solid var(--warning);border-radius:var(--radius);font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;';
+      cacheIndicator.innerHTML = '<span><i class="fas fa-database" style="margin-right:8px;color:var(--warning);"></i><span data-i18n="cachedData">Restored from local cache</span></span><button class="btn btn-sm btn-secondary" onclick="refreshClusterData()"><i class="fas fa-sync-alt"></i> <span data-i18n="refresh">Refresh</span></button>';
+      if (typeof setLanguage === 'function' && currentLanguage) setLanguage(currentLanguage);
+      var form = document.getElementById('clusterForm');
+      if (form) form.parentNode.insertBefore(cacheIndicator, form);
+    }
+    cacheIndicator.style.display = 'flex';
+  } else if (cacheIndicator) {
+    cacheIndicator.style.display = 'none';
+  }
+}
+
+function refreshClusterData() {
+  // Clear cached data and navigate to keyword research
+  localStorage.removeItem('rankivo_kw_data');
+  localStorage.removeItem('rankivo_cluster_data');
+  state.keywordData = null;
+  state.clusterMap = null;
+  var cacheIndicator = document.getElementById('clusterCacheIndicator');
+  if (cacheIndicator) cacheIndicator.style.display = 'none';
+  navigate('keywords');
 }
 
 async function buildClusterMap() {
