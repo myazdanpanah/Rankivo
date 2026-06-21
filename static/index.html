@@ -5,7 +5,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rankivo — SEO AI Tools</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+
+/* ============================================================
+   Technical SEO
+   ============================================================ */
+async function runTechnicalAudit() {
+  const url = document.getElementById('techUrl').value.trim();
+  if (!url) { showToast('Please enter a URL', 'error'); return; }
+  const btn = document.getElementById('btnTechAudit');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running...';
+  try {
+    const res = await (await fetch(API + '/api/technical/audit', { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ url, include_web_vitals: true }) })).json();
+    renderTechResults(res);
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  btn.disabled = false; btn.innerHTML = '<i class="fas fa-cogs"></i> ' + t('fullTechnicalAudit');
+}
+
+async function runTechCheck(type) {
+  const url = document.getElementById('techUrl').value.trim();
+  if (!url) { showToast('Please enter a URL', 'error'); return; }
+  const endpoints = { 'robots-txt': '/api/technical/robots-txt', 'sitemap': '/api/technical/sitemap', 'structured-data': '/api/technical/structured-data', 'web-vitals': '/api/technical/web-vitals' };
+  try {
+    const res = await (await fetch(API + endpoints[type], { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) })).json();
+    renderSingleTechCheck(type, res);
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function renderTechResults(data) {
+  const el = document.getElementById('techResults');
+  el.style.display = 'block';
+  let html = '';
+
+  const score = data.overall_score || 0;
+  html += '<div class="metrics-row">';
+  html += '<div class="metric-card"><div class="metric-icon ' + (score >= 80 ? 'green' : score >= 50 ? 'yellow' : 'red') + '"><i class="fas fa-check-circle"></i></div><div class="metric-label">' + t('techOverallScore') + '</div><div class="metric-value" style="color:var(--' + (score >= 80 ? 'success' : score >= 50 ? 'warning' : 'danger') + ')">' + score + '/100</div></div>';
+  html += '<div class="metric-card"><div class="metric-icon blue"><i class="fas fa-exclamation-triangle"></i></div><div class="metric-label">' + t('techIssues') + '</div><div class="metric-value">' + (data.total_issues || 0) + '</div></div>';
+  html += '</div>';
+
+  const sections = [
+    { key: 'robots_txt', icon: 'fa-robot', label: t('techRobotsTxt') },
+    { key: 'sitemap', icon: 'fa-sitemap', label: t('techSitemap') },
+    { key: 'structured_data', icon: 'fa-code', label: t('techStructuredData') },
+    { key: 'core_web_vitals', icon: 'fa-tachometer-alt', label: t('techWebVitals') },
+  ];
+
+  for (const s of sections) {
+    const d = data[s.key];
+    if (!d || Object.keys(d).length === 0) continue;
+    const sc = d.score || 0;
+    html += '<div class="card"><div class="card-header"><div class="card-title"><i class="fas ' + s.icon + '"></i> ' + s.label + ' <span class="badge badge-' + (sc >= 80 ? 'success' : sc >= 50 ? 'warning' : 'danger') + '">' + sc + '/100</span></div></div>';
+    html += renderTechSection(d);
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function renderSingleTechCheck(type, data) {
+  const el = document.getElementById('techResults');
+  el.style.display = 'block';
+  const labels = { 'robots-txt': t('techRobotsTxt'), 'sitemap': t('techSitemap'), 'structured-data': t('techStructuredData'), 'web-vitals': t('techWebVitals') };
+  let html = '<div class="card"><div class="card-header"><div class="card-title">' + labels[type] + ' <span class="badge badge-' + ((data.score||0) >= 80 ? 'success' : (data.score||0) >= 50 ? 'warning' : 'danger') + '">' + (data.score || 0) + '/100</span></div></div>';
+  html += renderTechSection(data);
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderTechSection(data) {
+  let html = '';
+  const issues = data.issues || [];
+  if (issues.length > 0) {
+    issues.forEach(i => {
+      const icon = i.severity === 'critical' ? 'fa-times-circle' : i.severity === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+      html += '<div class="issue-item ' + i.severity + '"><i class="fas ' + icon + ' issue-icon"></i><div><div class="issue-cat">' + (i.category || i.severity || '') + '</div>' + i.message + '</div></div>';
+    });
+  } else {
+    html += '<div style="padding:12px;color:var(--success);font-size:0.9rem;"><i class="fas fa-check-circle"></i> No issues found</div>';
+  }
+  const recs = data.recommendations || [];
+  if (recs.length > 0) {
+    html += '<div style="margin-top:12px;">';
+    recs.forEach(r => { html += '<div style="padding:6px 12px;font-size:0.88rem;color:var(--text-secondary);">• ' + (typeof r === 'string' ? r : r.message || JSON.stringify(r)) + '</div>'; });
+    html += '</div>';
+  }
+  if (data.total_urls !== undefined) { html += '<div style="padding:8px 12px;font-size:0.85rem;color:var(--text-muted);">Total URLs: ' + data.total_urls + '</div>'; }
+  if (data.sitemaps_found && Array.isArray(data.sitemaps_found)) { html += '<div style="padding:8px 12px;font-size:0.85rem;color:var(--text-muted);">Sitemaps in robots.txt: ' + data.sitemaps_found.length + '</div>'; }
+  if (data.schemas_found !== undefined) { html += '<div style="padding:8px 12px;font-size:0.85rem;color:var(--text-muted);">Schemas found: ' + data.schemas_found + '</div>'; }
+  if (data.performance_score !== undefined && data.performance_score !== null) { html += '<div style="padding:8px 12px;font-size:0.85rem;color:var(--text-muted);">Performance Score: ' + data.performance_score + '/100</div>'; }
+  const opps = data.opportunities || [];
+  if (opps.length > 0) {
+    html += '<div style="margin-top:8px;"><strong style="font-size:0.85rem;">Top Opportunities:</strong>';
+    opps.slice(0, 5).forEach(o => { html += '<div style="padding:4px 12px;font-size:0.85rem;color:var(--text-secondary);">• ' + o.title + ' (save ~' + o.savings_ms + 'ms)</div>'; });
+    html += '</div>';
+  }
+  return html;
+}
+
+
+</script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
@@ -1853,6 +1951,78 @@ tr:hover td { background: var(--bg-input); }
     <!-- ═══════════════════════════════════════════
          PAGE: Settings
          ═══════════════════════════════════════════ -->
+
+
+    <!-- ==============================================
+
+         PAGE: Technical SEO
+
+         ============================================== -->
+
+    <div class="page" id="page-technical">
+
+      <div class="card">
+
+        <div class="card-header">
+
+          <div class="card-title"><i class="fas fa-cogs"></i> <span data-i18n="technicalSeoTitle">Technical SEO Audit</span></div>
+
+        </div>
+
+        <div class="form-row-3">
+
+          <div class="form-group">
+
+            <label class="form-label" data-i18n="urlToAudit">URL to Audit</label>
+
+            <input type="text" class="form-input" id="techUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') runTechnicalAudit()">
+
+          </div>
+
+          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;">
+
+            <button class="btn btn-primary" onclick="runTechnicalAudit()" id="btnTechAudit">
+
+              <i class="fas fa-cogs"></i> <span data-i18n="fullTechnicalAudit">Full Technical Audit</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="runTechCheck('robots-txt')" id="btnRobots">
+
+              <i class="fas fa-robot"></i> robots.txt
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="runTechCheck('sitemap')" id="btnSitemap">
+
+              <i class="fas fa-sitemap"></i> sitemap
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="runTechCheck('structured-data')" id="btnSchema">
+
+              <i class="fas fa-code"></i> Schema
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="runTechCheck('web-vitals')" id="btnVitals">
+
+              <i class="fas fa-tachometer-alt"></i> Web Vitals
+
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div id="techResults" style="display:none;"></div>
+
+    </div>
+
+
+
     <div class="page" id="page-settings">
       <div class="card">
         <div class="card-header">
@@ -2057,7 +2227,7 @@ tr:hover td { background: var(--bg-input); }
    ══════════════════════════════════════════════ */
 const TRANSLATIONS = {
   en: {
-    navTrends: 'Google Trends', navBingTrends: 'Bing Trends', navBing: 'Bing SEO', navSettings: 'Settings',
+    navTrends: 'Google Trends', navBingTrends: 'Bing Trends', navTechnical: 'Technical SEO', navBing: 'Bing SEO', navSettings: 'Settings',
     dashboard: 'Dashboard', keywordResearch: 'Keyword Research', pillarCluster: 'Pillar-Cluster Map',
     articleGenerator: 'Article Generator', contentCalendar: 'Content Calendar',
     seoAudit: 'SEO Audit', batchAudit: 'Batch Audit', aiRecommendations: 'AI Recommendations',
@@ -2292,14 +2462,14 @@ function setLanguage(lang) {
       articles: 'Article Generator', calendar: 'Content Calendar', audit: 'SEO Audit',
       batch: 'Batch Audit', recommendations: 'AI Recommendations',
       tracking: 'Keyword Tracking', history: 'Audit History',
-      trends: 'Google Trends', bing: 'Bing SEO', 'bing-trends': 'Bing Trends', settings: 'Settings'
+      trends: 'Google Trends', bing: 'Bing SEO', 'bing-trends': 'Bing Trends', technical: 'Technical SEO', settings: 'Settings'
     },
     fa: {
       dashboard: 'داشبورد', keywords: 'تحقیق کلمات کلیدی', clusters: 'نقشه ستون-خوشه',
       articles: 'تولید مقاله', calendar: 'تقویم محتوا', audit: 'سئوی URL',
       batch: 'سئوی دسته‌جمعی', recommendations: 'توصیه‌های هوش مصنوعی',
       tracking: 'ردیابی کلمات کلیدی', history: 'تاریخچه سئو',
-      trends: 'روندهای گوگل', bing: 'سئوی بینگ', settings: 'تنظیمات'
+      trends: 'روندهای گوگل', bing: 'سئوی بینگ', technical: 'سئوی فنی', settings: 'تنظیمات'
     }
   };
   document.getElementById('pageTitle').textContent = (titles[lang] || titles.en)[currentPage] || currentPage;
