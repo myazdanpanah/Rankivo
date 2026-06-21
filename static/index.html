@@ -2824,7 +2824,7 @@ async function runLlmIntelligence(keywords, seed) {
     });
     if (!res.ok) return null;
     return await res.json();
-  } catch(e) { console.log('LLM intel error:', e); return null; }
+  } catch(e) { console.log('LLM intel error:', e); toast('LLM analysis unavailable - using fallback.', 'error'); return null; }
 }
 
 function renderKeywordDifficulty(difficulties) {
@@ -2951,6 +2951,38 @@ async function runKeywordResearch() {
         renderKwTrendsRelated(data.trends_related);
       }
       document.getElementById('kwTrendsCard').style.display = 'block';
+    }
+
+    // Run LLM Intelligence if enabled
+    if (document.getElementById('kwUseLlm').checked) {
+      document.getElementById('btnResearch').innerHTML = '<span class="spinner"></span> LLM Analysis...';
+      try {
+        const allKwList = [...allKw];
+        const llmData = await runLlmIntelligence(allKwList, seed);
+        if (llmData) {
+          // Merge LLM intent classification into intent_map
+          if (llmData.intents && Object.keys(llmData.intents).length > 0) {
+            if (!data.intent_map) data.intent_map = {};
+            Object.assign(data.intent_map, llmData.intents);
+            // Re-render the intent chart with LLM-enhanced data
+            if (data.intent_map && Object.keys(data.intent_map).length > 0) renderIntentChart(data.intent_map);
+          }
+          // Render keyword difficulty
+          if (llmData.difficulties) {
+            renderKeywordDifficulty(llmData.difficulties);
+          }
+          // Show cluster method info
+          if (llmData.clusters) {
+            const clusterCount = llmData.clusters.num_clusters || 0;
+            toast('LLM clustering: ' + clusterCount + ' semantic clusters found', 'info');
+          }
+          toast('LLM intelligence analysis complete!', 'success');
+        }
+      } catch(llmErr) {
+        console.log('LLM intelligence error:', llmErr);
+        toast('LLM analysis failed - using heuristic results', 'error');
+      }
+      document.getElementById('btnResearch').innerHTML = '<i class="fas fa-rocket"></i> ' + t('startResearch');
     }
 
     toast('Keyword research complete!', 'success');
@@ -3096,6 +3128,68 @@ async function buildClusterMap() {
     });
     hideLoading();
     if (data.error) { toast(data.error, 'error'); return; }
+
+    // Use semantic LLM clustering if enabled
+    if (document.getElementById('useSemanticClustering').checked) {
+      document.getElementById('btnBuildCluster').innerHTML = '<span class="spinner"></span> Semantic Clustering...';
+      try {
+        const kwData = state.keywordData || {};
+        const allKw = new Set();
+        ['suggestions','modifier_expanded','related_searches','people_also_ask'].forEach(k => {
+          (kwData[k] || []).forEach(w => allKw.add(w));
+        });
+        const keywords = [...allKw].slice(0, 100);
+        const seed = kwData.seed || '';
+        const llmRes = await fetch(API + '/api/llm-intel/cluster', {
+          method: 'POST',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keywords, seed })
+        });
+        if (llmRes.ok) {
+          const llmCluster = await llmRes.json();
+          if (!llmCluster.error && llmCluster.clusters) {
+            // Convert LLM clusters back to pillar-cluster format
+            const pillarClusters = [];
+            const contentPlan = [];
+            (llmCluster.clusters.clusters || []).forEach((cluster, idx) => {
+              const kwList = cluster.keywords || [];
+              const pillarKw = kwList[0] || ('Cluster ' + (idx + 1));
+              const intent = (data.intent_map || {})[pillarKw] || 'informational';
+              pillarClusters.push({
+                pillar_keyword: pillarKw,
+                pillar_title: pillarKw,
+                keywords: kwList,
+                keyword_count: kwList.length,
+              });
+              const articles = kwList.slice(0, 5).map(kw => ({
+                keyword: kw,
+                intent: (data.intent_map || {})[kw] || 'informational',
+                suggested_title: kw,
+              }));
+              contentPlan.push({
+                pillar_keyword: pillarKw,
+                pillar_title: pillarKw,
+                pillar_intent: intent,
+                articles,
+                total_content_pieces: articles.length,
+              });
+            });
+            data.pillar_clusters = pillarClusters;
+            data.content_plan = contentPlan;
+            data.stats = {
+              total_clusters: pillarClusters.length,
+              total_keywords: keywords.length,
+              total_content_pieces: contentPlan.reduce((sum, p) => sum + p.articles.length, 0),
+            };
+            toast('Semantic clustering applied: ' + pillarClusters.length + ' clusters', 'success');
+          }
+        }
+      } catch(semErr) {
+        console.log('Semantic clustering error:', semErr);
+        toast('Semantic clustering failed - using word-overlap clustering', 'error');
+      }
+      document.getElementById('btnBuildCluster').innerHTML = '<i class="fas fa-project-diagram"></i> ' + t('buildMap');
+    }
 
     state.clusterMap = data;
     document.getElementById('clusterResults').style.display = 'block';
