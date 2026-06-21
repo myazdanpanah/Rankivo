@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rankivo — SEO AI Tools</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
+<script>
 /* ============================================================
    Technical SEO
    ============================================================ */
@@ -101,9 +102,8 @@ function renderTechSection(data) {
   }
   return html;
 }
-
-
 </script>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
@@ -1191,6 +1191,9 @@ tr:hover td { background: var(--bg-input); }
     </a>
     <a class="nav-item" data-page="bing" onclick="navigate('bing')">
       <i class="fab fa-microsoft"></i> <span data-i18n="navBing">Bing SEO</span>
+    </a>
+    <a class="nav-item" data-page="technical" onclick="navigate('technical')">
+      <i class="fas fa-cogs"></i> <span data-i18n="navTechnical">Technical SEO</span>
     </a>
     <a class="nav-item" data-page="recommendations" onclick="navigate('recommendations')">
       <i class="fas fa-lightbulb"></i> <span data-i18n="navAiRecommendations">AI Recommendations</span>
