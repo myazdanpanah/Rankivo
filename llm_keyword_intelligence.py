@@ -24,18 +24,9 @@ from config import (
 from keyword_research import classify_intent as _heuristic_intent
 
 
-def _random_ua() -> str:
-    import random as _r
-    from config import USER_AGENTS as _UA
-    return _r.choice(_UA)
-
-
 # ──────────────────────────────────────────────
 # Ollama Helpers
 # ──────────────────────────────────────────────
-
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 def _check_ollama() -> bool:
@@ -66,8 +57,39 @@ def _ollama_generate(prompt: str, system: str = "", model: str = "") -> str:
     return resp.json()["response"]
 
 
-def _ollama_embeddings(texts: list[str], model: str = "nomic-embed-text") -> list[list[float]]:
-    """Get embeddings for a list of texts using Ollama's embedding endpoint."""
+_cached_embedding_model: str | None = None
+
+
+def _check_embedding_model() -> str:
+    """Find the best available embedding model. Returns model name or empty string."""
+    global _cached_embedding_model
+    if _cached_embedding_model is not None:
+        return _cached_embedding_model
+    try:
+        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        if resp.status_code == 200:
+            models = [m["name"] for m in resp.json().get("models", [])]
+            for preferred in [EMBEDDING_MODEL, "nomic-embed-text", "mxbai-embed-large", "all-minilm"]:
+                for m in models:
+                    if preferred in m:
+                        _cached_embedding_model = m
+                        return m
+    except Exception:
+        pass
+    _cached_embedding_model = ""
+    return ""
+
+
+def _ollama_embeddings(texts: list[str], model: str = "") -> list[list[float]]:
+    """Get embeddings for a list of texts using Ollama's embedding endpoint.
+    Falls back to TF-IDF vectorizer if no embedding model is available."""
+    if not model:
+        model = _check_embedding_model()
+    
+    if not model:
+        print("[llm_intel] No embedding model available, using TF-IDF fallback")
+        return _tfidf_embeddings(texts)
+    
     embeddings = []
     for text in texts:
         try:
@@ -80,9 +102,34 @@ def _ollama_embeddings(texts: list[str], model: str = "nomic-embed-text") -> lis
             embeddings.append(resp.json()["embedding"])
         except Exception as e:
             print(f"[llm_intel] Embedding error for '{text[:50]}': {e}")
-            # Return a zero vector as fallback
             embeddings.append([0.0] * 768)
     return embeddings
+
+
+def _tfidf_embeddings(texts: list[str], max_features: int = 256) -> list[list[float]]:
+    """Generate TF-IDF based embeddings as fallback when no LLM embedding model is available.
+    Uses character n-grams for multilingual support (works with Persian/Farsi)."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.preprocessing import normalize
+    
+    if not texts:
+        return []
+    
+    # Use character n-grams (2-4) for multilingual support
+    vectorizer = TfidfVectorizer(
+        analyzer='char',
+        ngram_range=(2, 4),
+        max_features=max_features,
+        sublinear_tf=True,
+    )
+    try:
+        tfidf_matrix = vectorizer.fit_transform(texts)
+        # Normalize to unit vectors for cosine similarity
+        normalized = normalize(tfidf_matrix, norm='l2')
+        return normalized.toarray().tolist()
+    except Exception as e:
+        print(f"[llm_intel] TF-IDF fallback error: {e}")
+        return [[0.0] * max_features for _ in texts]
 
 
 # ──────────────────────────────────────────────
@@ -101,6 +148,47 @@ Rules:
 - For Persian/Farsi keywords, translate mentally and classify based on meaning.
 - Consider cultural context (e.g., "خرید" = buy = transactional, "آموزش" = tutorial = informational)."""
 
+# Persian-specific few-shot prompt for better accuracy
+INTENT_SYSTEM_PROMPT_FA = """You are an SEO keyword intent classifier. Classify the given Persian/Farsi keyword into exactly ONE of these categories:
+- informational: کاربر می‌خواهد چیزی یاد بگیرد (آموزش، راهنما، چیست، نحوه)
+- transactional: کاربر می‌خواهد خرید/دانلود/عضویت کند (خرید، قیمت، ارزان، دانلود)
+- navigational: کاربر می‌خواهد سایت/برند خاصی را پیدا کند (ورود، سایت رسمی، اپلیکیشن)
+- commercial: کاربر در حال مقایسه گزینه‌ها قبل از خرید است (بهترین، مقایسه، نقد، بررسی)
+
+Examples:
+- "خرید لپتاپ ارزان" → transactional
+- "آموزش پایتون" → informational
+- "ورود به جیمیل" → navigational
+- "بهترین گوشی ۲۰۲۶" → commercial
+- "نحوه نصب ویندوز" → informational
+- "قیمت آیفون" → transactional
+
+Rules:
+- Respond with ONLY the category name, nothing else.
+- If unsure, default to "informational"."""
+
+
+def _normalize_persian(text: str) -> str:
+    """Normalize Persian text for consistent processing."""
+    try:
+        from hazm import Normalizer
+        normalizer = Normalizer()
+        return normalizer.normalize(text)
+    except ImportError:
+        # Basic normalization without hazm
+        text = text.replace('ي', 'ی').replace('ك', 'ک')
+        text = text.replace('ؤ', 'و').replace('إ', 'ا').replace('أ', 'ا')
+        return text
+
+
+def _is_persian(text: str) -> bool:
+    """Check if text contains Persian characters."""
+    persian_range = range(0x0600, 0x06FF + 1)
+    arabic_range = range(0xFB50, 0xFDFF + 1)
+    extended_arabic = range(0xFE70, 0xFEFF + 1)
+    persian_count = sum(1 for c in text if ord(c) in persian_range or ord(c) in arabic_range or ord(c) in extended_arabic)
+    return persian_count > len(text) * 0.3
+
 
 def classify_intent_llm(keyword: str, model: str = "") -> str:
     """
@@ -111,15 +199,19 @@ def classify_intent_llm(keyword: str, model: str = "") -> str:
         return _classify_intent_heuristic(keyword)
 
     try:
+        # Use Persian-specific prompt for Persian keywords
+        is_fa = _is_persian(keyword)
+        system_prompt = INTENT_SYSTEM_PROMPT_FA if is_fa else INTENT_SYSTEM_PROMPT
+        normalized_kw = _normalize_persian(keyword) if is_fa else keyword
+        
         result = _ollama_generate(
-            prompt=f"Classify this keyword: \"{keyword}\"",
-            system=INTENT_SYSTEM_PROMPT,
+            prompt=f"Classify this keyword: \"{normalized_kw}\"",
+            system=system_prompt,
             model=model or OLLAMA_MODEL,
         ).strip().lower()
 
         # Validate response
         valid_intents = {"informational", "transactional", "navigational", "commercial"}
-        # Extract the intent from the response (handle cases where LLM adds extra text)
         for intent in valid_intents:
             if intent in result:
                 return intent
@@ -143,12 +235,39 @@ def classify_intents_batch(keywords: list[str], model: str = "", batch_size: int
 
     results = {}
 
+    # Detect if batch is predominantly Persian - split mixed batches
+    persian_kws = [kw for kw in keywords if _is_persian(kw)]
+    english_kws = [kw for kw in keywords if not _is_persian(kw)]
+    
+    # Process Persian and English keywords separately if batch is mixed
+    all_results = {}
+    if persian_kws and english_kws:
+        all_results.update(classify_intents_batch(persian_kws, model=model, batch_size=batch_size))
+        all_results.update(classify_intents_batch(english_kws, model=model, batch_size=batch_size))
+        return all_results
+    
+    is_fa_batch = len(persian_kws) > 0
+    
     # Process in batches to reduce API calls
     for i in range(0, len(keywords), batch_size):
         batch = keywords[i:i + batch_size]
-        batch_text = "\n".join(f"{j + 1}. \"{kw}\"" for j, kw in enumerate(batch))
+        normalized_batch = [_normalize_persian(kw) if _is_persian(kw) else kw for kw in batch]
+        batch_text = "\n".join(f"{j + 1}. \"{kw}\"" for j, kw in enumerate(normalized_batch))
 
-        prompt = f"""Classify each of these keywords into one of: informational, transactional, navigational, commercial.
+        if is_fa_batch:
+            prompt = f"""هر یک از کلمات کلیدی زیر را در یکی از دسته‌بندی‌های زیر طبقه‌بندی کنید:
+informational, transactional, navigational, commercial
+
+کلمات کلیدی:
+{batch_text}
+
+یک شیء JSON برگردانید که شماره هر کلمه کلیدی را به intent آن نگاشت کند.
+فرمت مثال:
+{{"1": "informational", "2": "transactional"}}
+
+فقط شیء JSON را برگردانید، بدون متن اضافی."""
+        else:
+            prompt = f"""Classify each of these keywords into one of: informational, transactional, navigational, commercial.
 
 Keywords:
 {batch_text}
@@ -326,7 +445,7 @@ def cluster_keywords_semantic(
     output = []
     for i, kws in enumerate(sorted(result, key=len, reverse=True)):
         # Find the keyword closest to the centroid as the "topic"
-        centroid = kmeans.cluster_center_[i] if i < len(kmeans.cluster_center_) else None
+        centroid = kmeans.cluster_centers_[i] if i < len(kmeans.cluster_centers_) else None
         topic = _find_closest_keyword(centroid, kws, valid_keywords, valid_embeddings, valid_mask, keywords)
 
         output.append({
@@ -370,20 +489,19 @@ def _find_closest_keyword(centroid, cluster_keywords, all_keywords, all_embeddin
     if centroid is None:
         return cluster_keywords[0]
 
-    # Map original keywords to their valid indices
-    valid_indices = [i for i, v in enumerate(valid_mask) if v]
+    # Build a dict for O(1) lookup instead of O(n) .index()
+    kw_to_idx = {kw: i for i, kw in enumerate(all_keywords)}
 
     best_kw = cluster_keywords[0]
     best_dist = float("inf")
 
     for kw in cluster_keywords:
-        if kw in all_keywords:
-            idx = all_keywords.index(kw)
-            if idx < len(all_embeddings):
-                dist = np.linalg.norm(all_embeddings[idx] - centroid)
-                if dist < best_dist:
-                    best_dist = dist
-                    best_kw = kw
+        idx = kw_to_idx.get(kw)
+        if idx is not None and idx < len(all_embeddings):
+            dist = np.linalg.norm(all_embeddings[idx] - centroid)
+            if dist < best_dist:
+                best_dist = dist
+                best_kw = kw
 
     return best_kw
 
