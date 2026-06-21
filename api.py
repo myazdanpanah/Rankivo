@@ -32,6 +32,7 @@ from notifications import send_email, send_slack_message, get_upcoming_deadlines
 from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY, PORT, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 import google_trends
 import seo_bing
+import technical_seo
 from users import verify_user, create_user, delete_user, change_password, get_all_users, get_setting, set_setting, get_all_settings
 
 app = Flask(__name__, static_folder="static", static_url_path="")
@@ -1146,7 +1147,7 @@ Return your analysis as JSON with keys: pillar_priorities (list of pillar topics
                     json_start = ai_response.find('{')
                     json_end = ai_response.rfind('}') + 1
                     if json_start >= 0 and json_end > json_start:
-                        ai_analysis = json_module.loads(ai_response[json_start:json_end])
+                        ai_analysis = json.loads(ai_response[json_start:json_end])
                 except Exception:
                     # If parsing fails, store raw response
                     ai_analysis = {"raw_analysis": ai_response}
@@ -1216,6 +1217,83 @@ Return your analysis as JSON with keys: pillar_priorities (list of pillar topics
 # ──────────────────────────────────────────────
 # 16. Settings
 # ──────────────────────────────────────────────
+
+# ──────────────────────────────────────────────
+# 18. Technical SEO
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/technical/robots-txt", methods=["POST"])
+def api_robots_txt():
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = technical_seo.analyze_robots_txt(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/technical/sitemap", methods=["POST"])
+def api_sitemap():
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        sitemap_url = data.get("sitemap_url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = technical_seo.analyze_sitemap(url, sitemap_url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/technical/structured-data", methods=["POST"])
+def api_structured_data():
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = technical_seo.analyze_structured_data(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/technical/web-vitals", methods=["POST"])
+def api_web_vitals():
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        strategy = data.get("strategy", "mobile")
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = technical_seo.get_core_web_vitals(url, strategy=strategy)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/technical/audit", methods=["POST"])
+def api_technical_audit():
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        include_web_vitals = data.get("include_web_vitals", True)
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = technical_seo.full_technical_audit(url, include_web_vitals=include_web_vitals)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 
 @require_auth
 @app.route("/api/settings", methods=["GET"])

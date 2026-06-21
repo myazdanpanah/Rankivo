@@ -60,6 +60,11 @@ PORT = int(os.getenv("PORT", "5500"))
 # --- Bing API Settings ---
 BING_API_KEY = os.getenv("BING_API_KEY", "")
 
+# --- PageSpeed Insights API Settings ---
+# Optional. Get a key at https://developers.google.com/speed/docs/insights/v5/get-started
+# Without a key, requests are rate-limited to ~1 per minute.
+PAGESPEED_API_KEY = os.getenv("PAGESPEED_API_KEY", "")
+
 # --- Google Trends Settings ---
 GOOGLE_TRENDS_HL = os.getenv("GOOGLE_TRENDS_HL", "en-US")
 GOOGLE_TRENDS_TZ = int(os.getenv("GOOGLE_TRENDS_TZ", "360"))
