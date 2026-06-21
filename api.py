@@ -35,6 +35,7 @@ import seo_bing
 import technical_seo
 import llm_keyword_intelligence as llm_intel
 from users import verify_user, create_user, delete_user, change_password, get_all_users, get_setting, set_setting, get_all_settings
+import content_gap
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = SECRET_KEY
@@ -1423,6 +1424,113 @@ def api_languages():
         "supported_languages": SUPPORTED_LANGUAGES,
         "default_language": DEFAULT_LANGUAGE,
     })
+
+
+
+# ──────────────────────────────────────────────
+# 18. Content Gap Analysis
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/content-gap/analyze", methods=["POST"])
+def api_content_gap_analyze():
+    """
+    Run content gap analysis against competitors.
+    Accepts: seed keyword, optional my_keywords list, optional competitor_urls list.
+    """
+    try:
+        data = request.json or {}
+        seed = data.get("seed", "").strip()
+        my_keywords = data.get("my_keywords", [])
+        competitor_urls = data.get("competitor_urls", [])
+        num_serp = data.get("num_serp_results", 5)
+        max_competitors = data.get("max_competitors", 5)
+
+        if not seed:
+            return jsonify({"error": "Seed keyword is required"}), 400
+
+        # If no my_keywords provided, try to get from session
+        if not my_keywords:
+            session = _get_session()
+            kw_data = session.get("keyword_data", {})
+            my_keywords = (
+                kw_data.get("suggestions", [])
+                + kw_data.get("modifier_expanded", [])
+                + kw_data.get("related_searches", [])
+            )
+
+        result = content_gap.run_content_gap_analysis(
+            seed_keyword=seed,
+            my_keywords=my_keywords,
+            competitor_urls=competitor_urls,
+            num_serp_results=num_serp,
+            max_competitors=max_competitors,
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@require_auth
+@app.route("/api/content-gap/discover", methods=["POST"])
+def api_content_gap_discover():
+    """
+    Discover competitor URLs for a keyword from SERP results.
+    """
+    try:
+        data = request.json or {}
+        keyword = data.get("keyword", "").strip()
+        num_results = data.get("num_results", 10)
+
+        if not keyword:
+            return jsonify({"error": "Keyword is required"}), 400
+
+        results = content_gap.get_serp_competitors(keyword, num_results=num_results)
+        return jsonify({"competitors": results, "keyword": keyword})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/content-gap/extract", methods=["POST"])
+def api_content_gap_extract():
+    """
+    Extract keywords from a specific URL for analysis.
+    """
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        top_n = data.get("top_n", 30)
+
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+
+        page_data = content_gap.extract_page_content(url)
+        if not page_data.get("success"):
+            return jsonify({"error": page_data.get("error", "Failed to extract content")}), 400
+
+        # Extract keywords from combined text
+        text_parts = [
+            page_data.get("title", ""),
+            page_data.get("description", ""),
+            " ".join(page_data.get("headings", {}).get("h1", [])),
+            " ".join(page_data.get("headings", {}).get("h2", [])),
+            " ".join(page_data.get("headings", {}).get("h3", [])),
+            page_data.get("body_text", ""),
+        ]
+        combined_text = " ".join(text_parts)
+        keywords = content_gap.extract_keywords_from_text(combined_text, top_n=top_n)
+
+        return jsonify({
+            "url": url,
+            "title": page_data.get("title", ""),
+            "description": page_data.get("description", ""),
+            "word_count": page_data.get("word_count", 0),
+            "headings": page_data.get("headings", {}),
+            "keywords": keywords,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

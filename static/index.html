@@ -1173,6 +1173,9 @@ tr:hover td { background: var(--bg-input); }
     <a class="nav-item" data-page="clusters" onclick="navigate('clusters')">
       <i class="fas fa-project-diagram"></i> <span data-i18n="navPillarCluster">Pillar-Cluster Map</span>
     </a>
+    <a class="nav-item" data-page="gap" onclick="navigate('gap')">
+      <i class="fas fa-crosshairs"></i> <span data-i18n="navContentGap">Content Gap</span>
+    </a>
 
     <div class="nav-section" data-i18n="navContent">Content</div>
     <a class="nav-item" data-page="articles" onclick="navigate('articles')">
@@ -1537,7 +1540,58 @@ tr:hover td { background: var(--bg-input); }
     <!-- ═══════════════════════════════════════════
          PAGE: Article Generator
          ═══════════════════════════════════════════ -->
-    <div class="page" id="page-articles">
+
+    <!-- Content Gap Analysis Page -->
+    <div class="page" id="page-gap" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title"><i class="fas fa-crosshairs"></i> <span data-i18n="contentGapTitle">Content Gap Analysis</span></h1>
+          <p class="page-subtitle" data-i18n="contentGapDesc">Find topics your competitors rank for that you don't</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <label class="form-label" data-i18n="contentGapSeedLabel">Target Keyword</label>
+            <input class="form-input" id="gapSeed" placeholder="e.g. seo tools" style="margin-bottom:12px;">
+            <label class="form-label" data-i18n="contentGapCompetitorsLabel">Competitor URLs (one per line, optional)</label>
+            <textarea class="form-input" id="gapCompetitors" rows="4" placeholder="https://competitor1.com&#10;https://competitor2.com" style="margin-bottom:12px;font-family:monospace;font-size:0.85rem;"></textarea>
+          </div>
+          <div>
+            <label class="form-label" data-i18n="contentGapMyKeywordsLabel">Your Keywords (one per line, optional)</label>
+            <textarea class="form-input" id="gapMyKeywords" rows="4" placeholder="Leave empty to use keyword research data" style="margin-bottom:12px;font-family:monospace;font-size:0.85rem;"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="btnGapAnalyze" onclick="analyzeContentGap()"><i class="fas fa-crosshairs"></i> <span data-i18n="contentGapAnalyzeBtn">Analyze Content Gaps</span></button>
+              <button class="btn btn-secondary" onclick="discoverCompetitors()"><i class="fas fa-search"></i> <span data-i18n="contentGapDiscoverBtn">Discover Competitors</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="gapResults" style="display:none;">
+        <div id="gapStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div class="card">
+            <div class="card-title"><i class="fas fa-exclamation-triangle" style="color:var(--warning);"></i> <span data-i18n="contentGapGapsTitle">Content Gaps</span></div>
+            <div id="gapKeywordsList" style="max-height:500px;overflow-y:auto;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-users"></i> <span data-i18n="contentGapKeywordsTitle">Keywords Found</span></div>
+            <div id="gapCompetitorKwList" style="max-height:500px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <div class="card-title"><i class="fas fa-link"></i> Competitors Analyzed</div>
+          <div id="gapCompetitorDetails"></div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="exportGapCsv()"><i class="fas fa-download"></i> <span data-i18n="contentGapExportBtn">Export Gaps CSV</span></button>
+        </div>
+      </div>
+    </div>
+
+        <div class="page" id="page-articles">
       <div class="card">
         <div class="card-header">
           <div class="card-title"><i class="fas fa-pen-fancy"></i> <span data-i18n="articleGeneratorTitle">Article Generator</span></div>
@@ -2290,6 +2344,7 @@ const TRANSLATIONS = {
     appSubtitle: 'SEO AI Tools', builtWith: 'Built with Python · Flask · Chart.js',
     navOverview: 'Overview', navDashboard: 'Dashboard', navResearch: 'Research',
     navKeywordResearch: 'Keyword Research', navPillarCluster: 'Pillar-Cluster Map',
+    navContentGap: 'Content Gap',
     navContent: 'Content', navArticleGenerator: 'Article Generator', navContentCalendar: 'Content Calendar',
     navAnalysis: 'Analysis', navSeoAudit: 'SEO Audit', navBatchAudit: 'Batch Audit',
     navAiRecommendations: 'AI Recommendations', navTracking: 'Tracking',
@@ -2362,6 +2417,46 @@ const TRANSLATIONS = {
     useSemanticClustering: 'Semantic (LLM)',
     cachedData: 'Restored from local cache',
     refresh: 'Refresh',
+    contentGapTitle: 'تحلیل شکافت موضوعی',
+    contentGapDesc: 'موضوعی را که رقابتان توجه در نتیجه رد ظاهر میکنند',
+    contentGapSeedLabel: 'کلمه کلیدی هدف',
+    contentGapSeedPlaceholder: 'مثلًا seo tools',
+    contentGapCompetitorsLabel: 'آدرس رقکابتان (هر صفحه بر یک خط)',
+    contentGapCompetitorsPlaceholder: 'https://competitor1.com\nhttps://competitor2.com',
+    contentGapMyKeywordsLabel: 'کلمات کلیدی شما (هر صفحه بر یک خط)',
+    contentGapMyKeywordsPlaceholder: 'خالی بگذارید برای استفاده از دادهای کلمه کلیدی',
+    contentGapAnalyzeBtn: 'تحلیل شکافت موضوعی',
+    contentGapDiscoverBtn: 'کشف رقڨات',
+    contentGapResultsTitle: 'نتایج تحلیل',
+    contentGapKeywordsTitle: 'کلمات کلیدی يافته شده',
+    contentGapGapsTitle: 'شکافت‌های موضوعی',
+    contentGapCoverageTitle: 'پوشایش',
+    contentGapOpportunity: 'امکان',
+    contentGapFrequency: 'تکرار',
+    contentGapCompetitorsUsing: 'رقباتان استفاده از',
+    contentGapNoResults: 'شکافتی یافته نشد! محتواوت شما کلمات رقباتان را کامل کرده است.',
+    contentGapLoading: 'در حال تحلیل مقالات رقبتان...',
+    contentGapExportBtn: 'خروج CSV',
+    contentGapTitle: 'Content Gap Analysis',
+    contentGapDesc: 'Find topics your competitors rank for that you don\'t',
+    contentGapSeedLabel: 'Target Keyword',
+    contentGapSeedPlaceholder: 'e.g. seo tools',
+    contentGapCompetitorsLabel: 'Competitor URLs (one per line, optional)',
+    contentGapCompetitorsPlaceholder: 'https://competitor1.com\nhttps://competitor2.com',
+    contentGapMyKeywordsLabel: 'Your Keywords (one per line, optional)',
+    contentGapMyKeywordsPlaceholder: 'Leave empty to use keyword research data',
+    contentGapAnalyzeBtn: 'Analyze Content Gaps',
+    contentGapDiscoverBtn: 'Discover Competitors',
+    contentGapResultsTitle: 'Gap Analysis Results',
+    contentGapKeywordsTitle: 'Keywords Found',
+    contentGapGapsTitle: 'Content Gaps',
+    contentGapCoverageTitle: 'Coverage',
+    contentGapOpportunity: 'Opportunity',
+    contentGapFrequency: 'Frequency',
+    contentGapCompetitorsUsing: 'Competitors Using',
+    contentGapNoResults: 'No content gaps found. Your content covers competitor keywords well!',
+    contentGapLoading: 'Analyzing competitor content...',
+    contentGapExportBtn: 'Export Gaps CSV',
     llmCapabilities: 'قابلیت‌های هوش مصنوعی',
     technicalSeoTitle: 'سئوی فنی',
     fullTechnicalAudit: 'احتمام کامل سئوی فنی',
@@ -2406,6 +2501,7 @@ const TRANSLATIONS = {
     appSubtitle: 'ابزارهای هوشمند سئو', builtWith: 'ساخته شده با Python · Flask · Chart.js',
     navOverview: 'نمای کلی', navDashboard: 'داشبورد', navResearch: 'تحقیق',
     navKeywordResearch: 'تحقیق کلمات کلیدی', navPillarCluster: 'نقشه ستون-خوشه',
+    navContentGap: 'تحلیل شکافت موضوعی',
     navContent: 'محتوا', navArticleGenerator: 'تولید مقاله', navContentCalendar: 'تقویم محتوا',
     navAnalysis: 'تحلیل', navSeoAudit: 'سئوی سایت', navBatchAudit: 'سئوی دسته‌جمعی',
     navAiRecommendations: 'توصیه‌های هوش مصنوعی', navTracking: 'ردیابی',
@@ -2690,6 +2786,7 @@ function navigate(page) {
   if (page === 'calendar') loadCalendar();
   if (page === 'recommendations') loadRecommendations();
   if (page === 'clusters') updateClusterForm();
+  if (page === 'gap') { document.getElementById('gapSeed').focus(); }
   if (page === 'articles') { loadProviders(); showClusterTopicsBtn(); }
   if (page === 'trends') loadTrendsStatus();
   if (page === 'bing-trends') loadBingTrendsStatus();
@@ -4345,6 +4442,155 @@ async function loadAuditHistory() {
     loadDashboard();
   }
 })();
+
+
+/* ══════════════════════════════════════════════
+   Content Gap Analysis
+   ══════════════════════════════════════════════ */
+let gapData = null;
+
+async function analyzeContentGap() {
+  const seed = document.getElementById('gapSeed').value.trim();
+  if (!seed) { toast('Enter a target keyword', 'error'); return; }
+
+  const competitorsText = document.getElementById('gapCompetitors').value.trim();
+  const myKeywordsText = document.getElementById('gapMyKeywords').value.trim();
+
+  const competitorUrls = competitorsText ? competitorsText.split('\n').map(u => u.trim()).filter(u => u) : [];
+  const myKeywords = myKeywordsText ? myKeywordsText.split('\n').map(k => k.trim()).filter(k => k) : [];
+
+  showLoading('Analyzing competitor content...');
+  document.getElementById('btnGapAnalyze').disabled = true;
+
+  try {
+    const data = await api('/api/content-gap/analyze', {
+      method: 'POST',
+      body: JSON.stringify({
+        seed,
+        my_keywords: myKeywords,
+        competitor_urls: competitorUrls,
+        num_serp_results: 5,
+        max_competitors: 5,
+      })
+    });
+    hideLoading();
+    document.getElementById('btnGapAnalyze').disabled = false;
+
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    gapData = data;
+    renderGapResults(data);
+  } catch(e) {
+    hideLoading();
+    document.getElementById('btnGapAnalyze').disabled = false;
+    toast('Content gap analysis failed: ' + e.message, 'error');
+  }
+}
+
+async function discoverCompetitors() {
+  const seed = document.getElementById('gapSeed').value.trim();
+  if (!seed) { toast('Enter a target keyword first', 'error'); return; }
+
+  showLoading('Discovering competitors from SERP...');
+  try {
+    const data = await api('/api/content-gap/discover', {
+      method: 'POST',
+      body: JSON.stringify({ keyword: seed, num_results: 10 })
+    });
+    hideLoading();
+
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    if (data.competitors && data.competitors.length) {
+      const urls = data.competitors.map(c => c.url).filter(u => u).join('\n');
+      document.getElementById('gapCompetitors').value = urls;
+      toast('Found ' + data.competitors.length + ' competitors', 'success');
+    } else {
+      toast('No competitors found', 'warning');
+    }
+  } catch(e) {
+    hideLoading();
+    toast('Failed to discover competitors', 'error');
+  }
+}
+
+function renderGapResults(data) {
+  document.getElementById('gapResults').style.display = 'block';
+  const summary = data.summary || {};
+  const gaps = data.gap_analysis?.gap_keywords || [];
+  const competitorKws = data.competitor_keywords || [];
+  const competitors = data.competitors || [];
+
+  // Stats cards
+  document.getElementById('gapStats').innerHTML = `
+    <div class="metric-card"><div class="metric-icon red"><i class="fas fa-exclamation-triangle"></i></div><div class="metric-label" data-i18n="contentGapGapsTitle">Content Gaps</div><div class="metric-value">${summary.total_gaps || gaps.length}</div></div>
+    <div class="metric-card"><div class="metric-icon blue"><i class="fas fa-key"></i></div><div class="metric-label" data-i18n="contentGapKeywordsTitle">Keywords Found</div><div class="metric-value">${summary.total_competitor_keywords || 0}</div></div>
+    <div class="metric-card"><div class="metric-icon green"><i class="fas fa-check-circle"></i></div><div class="metric-label" data-i18n="contentGapCoverageTitle">Coverage</div><div class="metric-value">${data.gap_analysis?.coverage_percentage || 0}%</div></div>
+    <div class="metric-card"><div class="metric-icon purple"><i class="fas fa-users"></i></div><div class="metric-label">Competitors</div><div class="metric-value">${summary.competitors_analyzed || 0}</div></div>
+  `;
+
+  // Gap keywords list
+  if (gaps.length === 0) {
+    document.getElementById('gapKeywordsList').innerHTML = '<div class="empty-state" style="padding:24px;"><p data-i18n="contentGapNoResults">No content gaps found!</p></div>';
+  } else {
+    let html = '';
+    gaps.slice(0, 50).forEach((g, i) => {
+      const opp = g.opportunity_score || 0;
+      const oppColor = opp > 0.5 ? 'var(--danger)' : opp > 0.2 ? 'var(--warning)' : 'var(--success)';
+      const oppBg = opp > 0.5 ? 'var(--danger-bg)' : opp > 0.2 ? 'var(--warning-bg)' : 'var(--success-bg)';
+      html += '<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
+      html += '<div><span style="font-weight:600;font-size:0.9rem;">' + escapeHtml(g.keyword) + '</span>';
+      html += '<div style="font-size:0.78rem;color:var(--text-muted);">' + g.competitors_using + '/' + g.total_competitors + ' <span data-i18n="contentGapCompetitorsUsing">competitors</span></div></div>';
+      html += '<span style="background:' + oppBg + ';color:' + oppColor + ';padding:3px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;">' + (opp * 100).toFixed(0) + '%</span>';
+      html += '</div>';
+    });
+    document.getElementById('gapKeywordsList').innerHTML = html;
+  }
+
+  // Competitor keywords
+  let cHtml = '';
+  competitorKws.slice(0, 50).forEach(kw => {
+    cHtml += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
+    cHtml += '<span style="font-size:0.88rem;">' + escapeHtml(kw.keyword) + '</span>';
+    cHtml += '<span class="badge badge-info">' + kw.score.toFixed(2) + '</span>';
+    cHtml += '</div>';
+  });
+  document.getElementById('gapCompetitorKwList').innerHTML = cHtml || '<div class="empty-state" style="padding:16px;"><p>No competitor keywords extracted.</p></div>';
+
+  // Competitor details
+  let dHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">';
+  competitors.forEach(c => {
+    dHtml += '<div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);">';
+    dHtml += '<div style="font-weight:600;font-size:0.9rem;margin-bottom:4px;">' + escapeHtml(c.title || c.url) + '</div>';
+    dHtml += '<div style="font-size:0.8rem;color:var(--accent);margin-bottom:4px;word-break:break-all;">' + escapeHtml(c.url) + '</div>';
+    dHtml += '<div style="font-size:0.8rem;color:var(--text-muted);">' + (c.word_count || 0).toLocaleString() + ' words · ' + (c.keywords_found || 0) + ' keywords extracted</div>';
+    dHtml += '</div>';
+  });
+  dHtml += '</div>';
+  document.getElementById('gapCompetitorDetails').innerHTML = dHtml;
+
+  // Apply translations
+  if (typeof setLanguage === 'function' && currentLanguage) setLanguage(currentLanguage);
+}
+
+function exportGapCsv() {
+  if (!gapData) { toast('No data to export', 'error'); return; }
+  const gaps = gapData.gap_analysis?.gap_keywords || [];
+  if (!gaps.length) { toast('No gaps to export', 'error'); return; }
+
+  let csv = 'Keyword,Opportunity Score,Competitors Using,Total Competitors\n';
+  gaps.forEach(g => {
+    csv += '"' + g.keyword.replace(/"/g, '""') + '",' + g.opportunity_score.toFixed(4) + ',' + g.competitors_using + ',' + g.total_competitors + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'content-gaps-' + (gapData.seed || 'export') + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('Exported ' + gaps.length + ' gaps to CSV', 'success');
+}
+
 
 /* ══════════════════════════════════════════════
    Bing Trends
