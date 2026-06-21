@@ -1389,6 +1389,10 @@ tr:hover td { background: var(--bg-input); }
             <input type="checkbox" id="kwAutoPipeline"> <span data-i18n="autoPipeline">Auto-generate content plan</span>
             <i class="fas fa-magic" style="font-size:0.8rem;"></i>
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;cursor:pointer;color:#8b5cf6;">
+            <input type="checkbox" id="kwUseLlm"> <span data-i18n="useLlmIntel">Use LLM Intelligence</span>
+            <i class="fas fa-brain" style="font-size:0.8rem;"></i>
+          </label>
           <div style="flex:1"></div>
           <button class="btn btn-primary" onclick="runKeywordResearch()" id="btnResearch">
             <i class="fas fa-rocket"></i> <span data-i18n="startResearch">Start Research</span>
@@ -1444,6 +1448,14 @@ tr:hover td { background: var(--bg-input); }
           <div id="kwRelated"></div>
         </div>
 
+        <div class="card" id="kwDifficultyCard" style="display:none;">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-signal" style="color:#8b5cf6;"></i> <span data-i18n="keywordDifficulty">Keyword Difficulty</span></div>
+            <span class="badge badge-purple" id="kwDifficultyBadge"></span>
+          </div>
+          <div id="kwDifficultyContent"></div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fas fa-globe"></i> <span data-i18n="serpResults">SERP Results</span></div>
@@ -1475,7 +1487,11 @@ tr:hover td { background: var(--bg-input); }
               <input type="range" id="clusterThreshold" min="0.15" max="0.60" step="0.05" value="0.30" style="width:100%;" oninput="document.getElementById('clusterThreshVal').textContent=this.value">
               <span style="font-size:0.85rem;color:var(--text-muted);"><span data-i18n="threshold">Threshold</span>: <span id="clusterThreshVal">0.30</span></span>
             </div>
-            <div class="form-group" style="display:flex;align-items:flex-end;">
+            <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;align-items:center;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;color:#8b5cf6;">
+                <input type="checkbox" id="useSemanticClustering"> <span data-i18n="useSemanticClustering">Semantic (LLM)</span>
+                <i class="fas fa-brain" style="font-size:0.75rem;"></i>
+              </label>
               <button class="btn btn-primary" onclick="buildClusterMap()" id="btnBuildCluster">
                 <i class="fas fa-project-diagram"></i> <span data-i18n="buildMap">Build Map</span>
               </button>
@@ -2328,6 +2344,9 @@ const TRANSLATIONS = {
     done: 'Done',
     failed: 'Failed',
     noClusterArticles: 'No articles found in the content plan.',
+    useLlmIntel: 'Use LLM Intelligence',
+    keywordDifficulty: 'Keyword Difficulty',
+    useSemanticClustering: 'Semantic (LLM)',
     technicalSeoTitle: 'سئوی فنی',
     fullTechnicalAudit: 'احتمام کامل سئوی فنی',
     techOverallScore: 'امتیاز کلی',
@@ -2793,6 +2812,65 @@ function renderDashHistoryChart(history) {
 /* ══════════════════════════════════════════════
    Keyword Research
    ══════════════════════════════════════════════ */
+// ──────────────────────────────────────────────
+// LLM Keyword Intelligence Functions
+// ──────────────────────────────────────────────
+async function runLlmIntelligence(keywords, seed) {
+  try {
+    const res = await fetch(API + '/api/llm-intel/analyze', {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords, seed, classify_intent: true, cluster: true, estimate_difficulty: true, difficulty_sample_size: 3 })
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e) { console.log('LLM intel error:', e); return null; }
+}
+
+function renderKeywordDifficulty(difficulties) {
+  if (!difficulties || Object.keys(difficulties).length === 0) return;
+  const card = document.getElementById('kwDifficultyCard');
+  if (!card) return;
+  card.style.display = 'block';
+  
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">';
+  for (const [kw, data] of Object.entries(difficulties)) {
+    const score = data.score || 0;
+    const level = data.level || 'medium';
+    const color = score <= 30 ? 'var(--success)' : score <= 60 ? 'var(--warning)' : 'var(--danger)';
+    const bgColor = score <= 30 ? 'var(--success-bg)' : score <= 60 ? 'var(--warning-bg)' : 'var(--danger-bg)';
+    const levelLabel = level.replace('_', ' ');
+    
+    html += '<div style="padding:12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+    html += '<span style="font-weight:600;font-size:0.9rem;">' + kw + '</span>';
+    html += '<span style="background:' + bgColor + ';color:' + color + ';padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:600;">' + levelLabel + '</span>';
+    html += '</div>';
+    html += '<div style="background:var(--bg-input);border-radius:4px;height:6px;margin-bottom:8px;"><div style="background:' + color + ';height:100%;width:' + score + '%;border-radius:4px;transition:width 0.3s;"></div></div>';
+    html += '<div style="font-size:0.78rem;color:var(--text-muted);">Score: ' + score + '/100</div>';
+    if (data.recommendation) {
+      html += '<div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;font-style:italic;">' + data.recommendation + '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('kwDifficultyContent').innerHTML = html;
+  
+  // Update badge
+  const scores = Object.values(difficulties).map(d => d.score || 0);
+  const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+  const badge = document.getElementById('kwDifficultyBadge');
+  if (badge) badge.textContent = 'Avg: ' + avg + '/100';
+}
+
+function renderIntentBadges(intentMap) {
+  if (!intentMap) return;
+  // Update existing intent badges with LLM-sourced data
+  const el = document.getElementById('kwSuggestions');
+  if (!el) return;
+  // The intent chart will be re-rendered by the caller
+}
+
 async function runKeywordResearch() {
   const seed = document.getElementById('kwSeed').value.trim();
   if (!seed) { toast('Enter a seed keyword', 'error'); return; }
