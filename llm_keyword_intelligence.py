@@ -12,6 +12,7 @@ import json
 import re
 import time
 import random
+import sys
 import requests
 import numpy as np
 from typing import Optional
@@ -22,6 +23,17 @@ from config import (
     EMBEDDING_MODEL, LLM_INTENT_CLASSIFICATION, SEMANTIC_CLUSTERING,
 )
 from keyword_research import classify_intent as _heuristic_intent
+
+
+def _safe_print(msg):
+    """Print that handles Unicode on Windows (CP1252) without crashing."""
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        try:
+            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
+        except Exception:
+            pass
 
 
 # ──────────────────────────────────────────────
@@ -87,7 +99,7 @@ def _ollama_embeddings(texts: list[str], model: str = "") -> list[list[float]]:
         model = _check_embedding_model()
     
     if not model:
-        print("[llm_intel] No embedding model available, using TF-IDF fallback")
+        _safe_print("[llm_intel] No embedding model available, using TF-IDF fallback")
         return _tfidf_embeddings(texts)
     
     embeddings = []
@@ -101,7 +113,7 @@ def _ollama_embeddings(texts: list[str], model: str = "") -> list[list[float]]:
             resp.raise_for_status()
             embeddings.append(resp.json()["embedding"])
         except Exception as e:
-            print(f"[llm_intel] Embedding error for '{text[:50]}': {e}")
+            _safe_print(f"[llm_intel] Embedding error for '{text[:50]}': {e}")
             embeddings.append([0.0] * 768)
     return embeddings
 
@@ -128,7 +140,7 @@ def _tfidf_embeddings(texts: list[str], max_features: int = 256) -> list[list[fl
         normalized = normalize(tfidf_matrix, norm='l2')
         return normalized.toarray().tolist()
     except Exception as e:
-        print(f"[llm_intel] TF-IDF fallback error: {e}")
+        _safe_print(f"[llm_intel] TF-IDF fallback error: {e}")
         return [[0.0] * max_features for _ in texts]
 
 
@@ -217,7 +229,7 @@ def classify_intent_llm(keyword: str, model: str = "") -> str:
                 return intent
         return "informational"
     except Exception as e:
-        print(f"[llm_intel] Intent classification error: {e}")
+        _safe_print(f"[llm_intel] Intent classification error: {e}")
         return _classify_intent_heuristic(keyword)
 
 
@@ -300,7 +312,7 @@ Return ONLY the JSON object, no other text."""
                 for kw in batch:
                     results[kw] = classify_intent_llm(kw, model)
         except Exception as e:
-            print(f"[llm_intel] Batch classification error: {e}")
+            _safe_print(f"[llm_intel] Batch classification error: {e}")
             for kw in batch:
                 results[kw] = _classify_intent_heuristic(kw)
 
@@ -355,7 +367,7 @@ def compute_embeddings(keywords: list[str], model: str = "") -> np.ndarray:
 
     if not model:
         model = EMBEDDING_MODEL
-    print(f"[llm_intel] Computing embeddings for {len(keywords)} keywords using {model}...")
+    _safe_print(f"[llm_intel] Computing embeddings for {len(keywords)} keywords using {model}...")
     embeddings_list = _ollama_embeddings(keywords, model=model)
     return np.array(embeddings_list)
 
@@ -556,7 +568,7 @@ def _get_serper_api(query: str, api_key: str, num: int = 10) -> list[dict]:
             })
         return results
     except Exception as e:
-        print(f"[llm_intel] Serper API error: {e}")
+        _safe_print(f"[llm_intel] Serper API error: {e}")
         return []
 
 
@@ -564,18 +576,20 @@ def _get_serper_fallback(query: str, num: int = 10) -> list[dict]:
     """Fallback SERP scraping using googlesearch-python."""
     try:
         from googlesearch import search as gsearch
+        import contextlib, io as _io
         results = []
-        for r in gsearch(query, num_results=num, advanced=True):
-            results.append({
-                "title": getattr(r, "title", ""),
-                "url": getattr(r, "url", ""),
-                "snippet": getattr(r, "description", ""),
-                "position": len(results) + 1,
-                "domain_rating": 0,
-            })
+        with contextlib.redirect_stdout(_io.StringIO()):
+            for r in gsearch(query, num_results=num, advanced=True):
+                results.append({
+                    "title": getattr(r, "title", ""),
+                    "url": getattr(r, "url", ""),
+                    "snippet": getattr(r, "description", ""),
+                    "position": len(results) + 1,
+                    "domain_rating": 0,
+                })
         return results
     except Exception as e:
-        print(f"[llm_intel] SERP fallback error: {e}")
+        _safe_print(f"[llm_intel] SERP fallback error: {e}")
         return []
 
 
@@ -701,7 +715,7 @@ Respond in JSON format ONLY:
                     "gov_edu_domains": gov_edu_count,
                 }
         except Exception as e:
-            print(f"[llm_intel] LLM difficulty analysis error: {e}")
+            _safe_print(f"[llm_intel] LLM difficulty analysis error: {e}")
 
     # Fallback: signal-based estimation only
     return {
@@ -795,31 +809,31 @@ def run_intelligent_keyword_analysis(
     if not keywords:
         return results
 
-    print(f"[llm_intel] Analyzing {len(keywords)} keywords...")
+    _safe_print(f"[llm_intel] Analyzing {len(keywords)} keywords...")
 
     # Step 1: Intent Classification (respects config toggle)
     if classify_intent and LLM_INTENT_CLASSIFICATION:
-        print("[llm_intel] Step 1: Classifying intent via LLM...")
+        _safe_print("[llm_intel] Step 1: Classifying intent via LLM...")
         results["intent_map"] = classify_intents_batch(keywords, model=model)
     elif classify_intent:
-        print("[llm_intel] Step 1: Classifying intent via heuristic (LLM disabled)...")
+        _safe_print("[llm_intel] Step 1: Classifying intent via heuristic (LLM disabled)...")
         results["intent_map"] = {kw: _classify_intent_heuristic(kw) for kw in keywords}
 
     # Step 2: Semantic Clustering (respects config toggle)
     if cluster and SEMANTIC_CLUSTERING:
-        print("[llm_intel] Step 2: Semantic clustering via embeddings...")
+        _safe_print("[llm_intel] Step 2: Semantic clustering via embeddings...")
         results["clusters"] = cluster_keywords_semantic(keywords)
     elif cluster:
-        print("[llm_intel] Step 2: Fallback word-overlap clustering (semantic disabled)...")
+        _safe_print("[llm_intel] Step 2: Fallback word-overlap clustering (semantic disabled)...")
         results["clusters"] = _fallback_cluster(keywords)
 
     # Step 3: Keyword Difficulty (sample a subset to avoid excessive API calls)
     if estimate_difficulty:
-        print("[llm_intel] Step 3: Estimating difficulty...")
+        _safe_print("[llm_intel] Step 3: Estimating difficulty...")
         # Sample keywords for difficulty estimation
         sample = keywords[:difficulty_sample_size]
         for kw in sample:
-            print(f"[llm_intel] Estimating difficulty for '{kw}'...")
+            _safe_print(f"[llm_intel] Estimating difficulty for '{kw}'...")
             results["difficulties"][kw] = estimate_keyword_difficulty_llm(kw, model=model)
             time.sleep(1)  # Rate limiting
 

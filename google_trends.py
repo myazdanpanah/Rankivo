@@ -4,7 +4,19 @@ Fetches trend data, interest over time, and related queries using pytrends.
 """
 import traceback
 import json
+import sys
 from typing import Optional
+
+
+def _safe_print(msg):
+    """Print that handles Unicode on Windows (CP1252) without crashing."""
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        try:
+            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
+        except Exception:
+            pass
 
 try:
     from pytrends.request import TrendReq as _TrendReqClass
@@ -26,7 +38,7 @@ def _get_client():
         try:
             _trends_client = _TrendReqClass(hl='en-US', tz=360, retries=3, backoff_factor=0.5)
         except Exception as e:
-            print(f"[google_trends] Failed to create client: {e}")
+            _safe_print(f"[google_trends] Failed to create client: {e}")
             return None
     return _trends_client
 
@@ -72,8 +84,7 @@ def get_interest_over_time(keywords: list[str], timeframe: str = "today 12-m", g
             "is_partial": data.get('isPartial', False) if hasattr(data, 'get') else False,
         }
     except Exception as e:
-        print(f"[google_trends] interest_over_time error: {e}")
-        traceback.print_exc()
+        _safe_print(f"[google_trends] interest_over_time error: {e}")
         return {"error": str(e)}
 
 
@@ -115,7 +126,7 @@ def get_related_queries(keywords: list[str], timeframe: str = "today 12-m", geo:
 
         return result
     except Exception as e:
-        print(f"[google_trends] related_queries error: {e}")
+        _safe_print(f"[google_trends] related_queries error: {e}")
         return {"error": str(e)}
 
 
@@ -142,7 +153,7 @@ def get_trending_searches(geo: str = "US") -> list[dict]:
             return trending
         return []
     except Exception as e:
-        print(f"[google_trends] trending_searches error: {e}")
+        _safe_print(f"[google_trends] trending_searches error: {e}")
         return [{"error": str(e)}]
 
 
@@ -176,7 +187,7 @@ def get_interest_by_region(keywords: list[str], timeframe: str = "today 12-m", g
             return json.loads(data.to_json(orient='records'))
         return {"message": "No region data available", "data": []}
     except Exception as e:
-        print(f"[google_trends] interest_by_region error: {e}")
+        _safe_print(f"[google_trends] interest_by_region error: {e}")
         return {"error": str(e)}
 
 

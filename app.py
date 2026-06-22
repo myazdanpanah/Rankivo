@@ -3,6 +3,16 @@ Rankivo — SEO AI Tools
 Entry point: Run `python app.py` to start the Web UI.
 """
 import os
+import sys
+
+# Force UTF-8 stdout/stderr to prevent CP1252 crashes with Persian/Arabic text.
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from api import app
 from config import PORT
 

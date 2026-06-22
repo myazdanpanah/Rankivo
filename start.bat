@@ -99,6 +99,9 @@ echo.
 REM Open browser after a short delay
 start "" /b cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:5500"
 
+REM Set UTF-8 encoding to prevent crashes with Persian/Arabic text
+set PYTHONIOENCODING=utf-8
+
 REM Start the Flask app (this blocks until Ctrl+C)
 "%PYTHON%" app.py
 

@@ -8,9 +8,22 @@ import time
 import random
 import re
 import ipaddress
+import sys
+import io
 from collections import Counter
 from typing import Optional
 from config import REQUEST_TIMEOUT, USER_AGENTS
+
+
+def _safe_print(msg):
+    """Print that handles Unicode on Windows (CP1252) without crashing."""
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        try:
+            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
+        except Exception:
+            pass
 
 
 def _random_ua() -> str:
@@ -60,18 +73,21 @@ def get_serp_competitors(keyword: str, num_results: int = 10) -> list[dict]:
     """
     try:
         from googlesearch import search as gsearch
+        import contextlib
         results = []
-        for r in gsearch(keyword, num_results=num_results, advanced=True):
-            url = getattr(r, "url", "")
-            if url and _is_safe_url(url):
-                results.append({
-                    "title": getattr(r, "title", ""),
-                    "url": url,
-                    "snippet": getattr(r, "description", ""),
-                })
+        # Suppress googlesearch's internal print() to avoid CP1252 crashes
+        with contextlib.redirect_stdout(io.StringIO()):
+            for r in gsearch(keyword, num_results=num_results, advanced=True):
+                url = getattr(r, "url", "")
+                if url and _is_safe_url(url):
+                    results.append({
+                        "title": getattr(r, "title", ""),
+                        "url": url,
+                        "snippet": getattr(r, "description", ""),
+                    })
         return results
     except Exception as e:
-        print(f"[content_gap] SERP search error for '{keyword}': {e}")
+        _safe_print(f"[content_gap] SERP search error for '{keyword}': {e}")
         return []
 
 
@@ -129,7 +145,7 @@ def extract_page_content(url: str) -> dict:
             "success": True,
         }
     except Exception as e:
-        print(f"[content_gap] Content extraction error for '{url}': {e}")
+        _safe_print(f"[content_gap] Content extraction error for '{url}': {e}")
         return {"url": url, "success": False, "error": str(e)}
 
 
@@ -411,7 +427,7 @@ def run_content_gap_analysis(
 
     # Step 1: Discover competitor URLs (or use provided ones)
     if not competitor_urls:
-        print(f"[content_gap] Discovering competitors for '{seed_keyword}'...")
+        _safe_print(f"[content_gap] Discovering competitors...")
         serp_results = get_serp_competitors(seed_keyword, num_results=num_serp_results)
         competitor_urls = [r["url"] for r in serp_results if r.get("url")][:max_competitors]
         result["serp_results"] = serp_results
@@ -423,7 +439,7 @@ def run_content_gap_analysis(
     # Step 2: Crawl each competitor and extract keywords
     competitor_data = []
     for i, url in enumerate(competitor_urls):
-        print(f"[content_gap] Analyzing competitor {i+1}/{len(competitor_urls)}: {url}")
+        _safe_print(f"[content_gap] Analyzing competitor {i+1}/{len(competitor_urls)}: {url}")
         page_data = extract_page_content(url)
 
         if page_data.get("success"):
@@ -465,7 +481,7 @@ def run_content_gap_analysis(
             competitor_data.append({"url": url, "success": False, "keywords": []})
 
     # Step 3: Calculate content gaps
-    print(f"[content_gap] Calculating gaps across {len(competitor_data)} competitors...")
+    _safe_print(f"[content_gap] Calculating gaps across {len(competitor_data)} competitors...")
     gap_result = calculate_content_gaps(my_keywords, competitor_data)
     result["gap_analysis"] = gap_result
 
