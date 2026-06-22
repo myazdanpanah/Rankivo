@@ -12,6 +12,8 @@ import traceback
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from keyword_research import run_keyword_research
 from pillar_cluster import build_pillar_cluster_map
@@ -42,16 +44,32 @@ app.secret_key = SECRET_KEY
 CORS(app)
 
 # ──────────────────────────────────────────────
+# Rate Limiting
+# ──────────────────────────────────────────────
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per minute"],
+    storage_uri="memory://",
+)
+
+# ──────────────────────────────────────────────
 # Auth System
 # ──────────────────────────────────────────────
 _tokens = {}  # token -> {username, created_at}
+_TOKEN_TTL = 3600 * 8  # 8 hours
 
-def _hash_password(pw: str) -> str:
-    return hashlib.sha256(pw.encode()).hexdigest()
+def _cleanup_expired_tokens():
+    """Remove expired tokens to prevent memory leak."""
+    now = time.time()
+    expired = [t for t, info in _tokens.items() if now - info.get("created_at", 0) > _TOKEN_TTL]
+    for t in expired:
+        _tokens.pop(t, None)
 
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        _cleanup_expired_tokens()
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
         if not token or token not in _tokens:
             return jsonify({"error": "Unauthorized"}), 401
@@ -60,14 +78,28 @@ def require_auth(f):
 
 
 # In-memory session store for keyword research results (per simple token)
-_session_store = {}
+_session_store = {}  # sid -> {keyword_data: ..., cluster_map: ..., ...}
+_session_meta = {}  # sid -> {last_access: float}
+_SESSION_TTL = 3600  # 1 hour
+_last_session_cleanup = time.time()
 
 
 def _get_session():
     """Simple session management via X-Session-ID header."""
+    global _last_session_cleanup
+    now = time.time()
+    # Periodic cleanup of stale sessions
+    if now - _last_session_cleanup > 300:  # every 5 minutes
+        stale = [sid for sid, meta in _session_meta.items()
+                 if now - meta.get("last_access", 0) > _SESSION_TTL]
+        for sid in stale:
+            _session_store.pop(sid, None)
+            _session_meta.pop(sid, None)
+        _last_session_cleanup = now
     sid = request.headers.get("X-Session-ID", "default")
     if sid not in _session_store:
         _session_store[sid] = {}
+    _session_meta[sid] = {"last_access": now}
     return _session_store[sid]
 
 
@@ -76,6 +108,7 @@ def _get_session():
 # ──────────────────────────────────────────────
 
 @app.route("/api/auth/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_login():
     data = request.json or {}
     username = data.get("username", "")
@@ -88,8 +121,8 @@ def api_login():
         _tokens[token] = {"username": username, "role": user["role"], "created_at": time.time()}
         return jsonify({"success": True, "token": token, "username": username, "role": user["role"]})
     
-    # Legacy config-based auth fallback
-    if username == ADMIN_USERNAME and _hash_password(password) == _hash_password(ADMIN_PASSWORD):
+    # Legacy config-based auth fallback (compare plaintext for fixed config password)
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         token = hashlib.sha256(f"{username}{time.time()}{SECRET_KEY}".encode()).hexdigest()
         _tokens[token] = {"username": username, "role": "admin", "created_at": time.time()}
         return jsonify({"success": True, "token": token, "username": username, "role": "admin"})
@@ -146,6 +179,7 @@ def api_status():
 
 @require_auth
 @app.route("/api/keyword-research", methods=["POST"])
+@limiter.limit("20 per minute")
 def api_keyword_research():
     try:
         data = request.json
@@ -242,6 +276,7 @@ def api_get_cluster_map():
 
 @require_auth
 @app.route("/api/article/generate", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_generate_article():
     try:
         data = request.json
@@ -375,6 +410,7 @@ def api_generate_article_batch():
 
 @require_auth
 @app.route("/api/audit", methods=["POST"])
+@limiter.limit("15 per minute")
 def api_audit():
     try:
         data = request.json
@@ -403,6 +439,7 @@ def api_audit():
 
 @require_auth
 @app.route("/api/batch-audit", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_batch_audit():
     try:
         data = request.json
@@ -935,16 +972,20 @@ def api_bing_trends():
             return jsonify({"error": "At least one keyword is required"}), 400
         
         # Generate Bing search interest data
-        # When BING_API_KEY is configured, we fetch real data; otherwise use simulated trends
+        # When BING_API_KEY is configured, we fetch real data; otherwise return simulated trends
         result = {
             "keywords": keywords,
             "geo": geo,
             "source": "Bing Webmaster API" if seo_bing.BING_API_KEY else "simulated",
+            "simulated": not bool(seo_bing.BING_API_KEY),
             "dates": [],
             "values": {},
             "related": [],
             "trending": [],
         }
+        
+        if not seo_bing.BING_API_KEY:
+            result["message"] = "No Bing API key configured — showing simulated data for demonstration."
         
         # Generate dates for the past 12 months
         from datetime import datetime
@@ -1013,6 +1054,7 @@ def api_get_users():
 
 @require_auth
 @app.route("/api/users", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_create_user():
     """Create a new user (admin only)."""
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
@@ -1041,6 +1083,7 @@ def api_create_user():
 
 @require_auth
 @app.route("/api/users/<username>", methods=["DELETE"])
+@limiter.limit("5 per minute")
 def api_delete_user(username):
     """Delete a user (admin only)."""
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
@@ -1056,6 +1099,7 @@ def api_delete_user(username):
 
 @require_auth
 @app.route("/api/auth/change-password", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_change_password():
     """Change password for the current user."""
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
@@ -1081,6 +1125,7 @@ def api_change_password():
 
 @require_auth
 @app.route("/api/pipeline/run", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_pipeline_run():
     """
     One-click automated pipeline:
@@ -1158,7 +1203,7 @@ def api_pipeline_run():
                 gap_analysis = {"status": "error", "error": str(e)}
                 print(f"[pipeline] Gap analysis failed: {e}")
 
-                # Step 3: AI Analysis — rank the content plan and suggest which articles to write first
+        # Step 3: AI Analysis — rank the content plan and suggest which articles to write first
         ai_analysis = {}
         content_plan = cluster_result.get("content_plan", [])
         
@@ -1417,6 +1462,7 @@ def api_web_vitals():
 
 @require_auth
 @app.route("/api/technical/audit", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_technical_audit():
     try:
         data = request.json or {}
@@ -1476,6 +1522,7 @@ def api_languages():
 
 @require_auth
 @app.route("/api/content-gap/analyze", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_content_gap_analyze():
     """
     Run content gap analysis against competitors.
@@ -1577,5 +1624,6 @@ def api_content_gap_extract():
 
 
 if __name__ == "__main__":
+    debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
     print(f"Rankivo Web UI starting at http://localhost:{PORT}")
-    app.run(debug=True, host="0.0.0.0", port=PORT)
+    app.run(debug=debug_mode, host="0.0.0.0", port=PORT)

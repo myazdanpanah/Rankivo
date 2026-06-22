@@ -58,6 +58,8 @@ NOTIFICATION_DAYS_BEFORE = int(os.getenv("NOTIFICATION_DAYS_BEFORE", "3"))
 PORT = int(os.getenv("PORT", "5500"))
 
 # --- Bing API Settings ---
+# SECURITY: If you previously used a Bing API key in .env.example, it was exposed
+# in git history. Rotate it immediately at https://www.bing.com/webmasters
 BING_API_KEY = os.getenv("BING_API_KEY", "")
 
 # --- PageSpeed Insights API Settings ---

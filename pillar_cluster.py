@@ -4,6 +4,7 @@ Groups keywords into pillar pages and supporting cluster articles.
 """
 from collections import defaultdict
 from difflib import SequenceMatcher
+from datetime import datetime
 
 
 # ──────────────────────────────────────────────
@@ -179,6 +180,7 @@ def _generate_cluster_title(keyword: str, intent: str) -> str:
     """Generate a cluster article title based on keyword and intent."""
     kw = keyword.strip().capitalize()
 
+    current_year = datetime.now().year
     templates = {
         "informational": [
             f"What Is {kw}? A Detailed Explanation",
@@ -186,7 +188,7 @@ def _generate_cluster_title(keyword: str, intent: str) -> str:
             f"Understanding {kw}",
         ],
         "commercial": [
-            f"Best {kw} in 2025",
+            f"Best {kw} in {current_year}",
             f"Top {kw} Options Compared",
             f"{kw}: Which One Should You Choose?",
         ],

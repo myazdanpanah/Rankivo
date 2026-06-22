@@ -7,6 +7,7 @@ import requests
 import time
 import random
 import re
+import ipaddress
 from collections import Counter
 from typing import Optional
 from config import REQUEST_TIMEOUT, USER_AGENTS
@@ -21,18 +22,27 @@ def _is_safe_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname or ""
-        # Block localhost, private IPs, and cloud metadata
-        blocked = [
-            "localhost", "127.", "10.", "172.16.", "172.17.", "172.18.", "172.19.",
-            "172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.",
-            "172.26.", "172.27.", "172.28.", "172.29.", "172.30.", "172.31.",
-            "192.168.", "169.254.", "0.", "metadata.google",
+        
+        # Block localhost and common internal hostnames
+        blocked_hostnames = [
+            "localhost", "metadata.google", "metadata.google.internal",
+            "metadata.aws.internal", "169.254.169.254",
         ]
-        for b in blocked:
-            if hostname.startswith(b) or hostname == b.rstrip("."):
-                return False
+        if hostname.lower() in blocked_hostnames:
+            return False
+        
+        # Check if scheme is allowed
         if parsed.scheme not in ("http", "https"):
             return False
+        
+        # Parse IP and check if it's private/reserved
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+                return False
+        except ValueError:
+            pass  # hostname is not an IP, that's fine
+        
         return True
     except Exception:
         return False

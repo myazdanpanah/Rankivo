@@ -31,6 +31,19 @@ def _get_pg_connection():
     global _pg_pool
     try:
         import psycopg2
+        # Check if existing connection is still alive
+        if _pg_pool is not None:
+            try:
+                with _pg_pool.cursor() as cur:
+                    cur.execute("SELECT 1")
+                return _pg_pool
+            except Exception:
+                # Connection is dead, reconnect
+                try:
+                    _pg_pool.close()
+                except Exception:
+                    pass
+                _pg_pool = None
         if _pg_pool is None:
             _pg_pool = psycopg2.connect(DATABASE_URL)
             _pg_pool.autocommit = True
@@ -222,7 +235,8 @@ def db_get_tracked_keywords() -> list[dict]:
             "last_tracked": row["last_tracked"],
             "latest_snapshot": latest,
         })
-    conn.close()
+    if db_type != "pg":
+        conn.close()
     return results
 
 

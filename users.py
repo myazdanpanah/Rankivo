@@ -7,12 +7,34 @@ import json
 import time
 from typing import Optional
 
+import bcrypt
+
 from database import db_get_connection
 
 
 def _hash_password(pw: str) -> str:
-    """Hash a password using SHA-256."""
-    return hashlib.sha256(pw.encode()).hexdigest()
+    """Hash a password using bcrypt."""
+    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+
+
+def _verify_password(pw: str, pw_hash: str) -> bool:
+    """Verify a password against a bcrypt hash. Falls back to SHA-256 for legacy hashes."""
+    try:
+        if pw_hash.startswith("$2"):
+            # bcrypt hash
+            return bcrypt.checkpw(pw.encode(), pw_hash.encode())
+        else:
+            # Legacy SHA-256 hash — verify and re-hash with bcrypt on success
+            if hashlib.sha256(pw.encode()).hexdigest() == pw_hash:
+                return True
+            return False
+    except Exception:
+        return False
+
+
+def _is_bcrypt_hash(pw_hash: str) -> bool:
+    """Check if a hash is bcrypt format."""
+    return pw_hash.startswith("$2")
 
 
 def init_users_table():
@@ -148,7 +170,7 @@ def change_password(username: str, old_password: str, new_password: str) -> dict
     if not user:
         return {"success": False, "error": "User not found"}
 
-    if user["password_hash"] != _hash_password(old_password):
+    if not _verify_password(old_password, user["password_hash"]):
         return {"success": False, "error": "Current password is incorrect"}
 
     if len(new_password) < 4:
@@ -176,30 +198,47 @@ def verify_user(username: str, password: str) -> Optional[dict]:
     conn, db_type = db_get_connection()
     cursor = conn.cursor()
 
+    # Fetch user by username only (can't filter by password_hash with bcrypt)
     if db_type == "pg":
         cursor.execute(
-            "SELECT username, role, email, is_active FROM users WHERE username = %s AND password_hash = %s",
-            (username, _hash_password(password)),
+            "SELECT username, role, email, is_active, password_hash FROM users WHERE username = %s",
+            (username,),
         )
     else:
         cursor.execute(
-            "SELECT username, role, email, is_active FROM users WHERE username = ? AND password_hash = ?",
-            (username, _hash_password(password)),
+            "SELECT username, role, email, is_active, password_hash FROM users WHERE username = ?",
+            (username,),
         )
     user = cursor.fetchone()
 
     if not user:
-        conn.close()
+        if db_type != "pg":
+            conn.close()
         return None
-    
-    # Convert to dict for safe access
+
     user_dict = dict(user)
-    
+
+    # Verify password using bcrypt (with SHA-256 backward compat)
+    if not _verify_password(password, user_dict.get("password_hash", "")):
+        if db_type != "pg":
+            conn.close()
+        return None
+
     # Check if user is active (SQLite uses 0/1, PG uses True/False)
     is_active = user_dict.get("is_active", True)
     if not bool(is_active):
-        conn.close()
+        if db_type != "pg":
+            conn.close()
         return None
+
+    # If password was verified via legacy SHA-256, upgrade to bcrypt
+    if not _is_bcrypt_hash(user_dict.get("password_hash", "")):
+        new_hash = _hash_password(password)
+        if db_type == "pg":
+            cursor.execute("UPDATE users SET password_hash = %s WHERE username = %s", (new_hash, username))
+        else:
+            cursor.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hash, username))
+        conn.commit()
 
     # Update last login
     if db_type == "pg":
