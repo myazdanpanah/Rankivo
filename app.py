@@ -13,7 +13,7 @@ if sys.platform == 'win32':
     except Exception:
         pass
 
-# Ensure sys.stdout encoding is set before importing modules that print Unicode
+# Set stdout encoding before importing modules that print Unicode (e.g. Persian/Arabic text)
 from api import app
 from config import PORT
 

@@ -22,19 +22,6 @@ jobs:
       - name: Start services
         run: docker compose up -d --wait
 
-      - name: Wait for app readiness
-        run: |
-          echo "Waiting for Flask app to be ready..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:5500/health > /dev/null 2>&1; then
-              echo "App is ready after ${i}s"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "App did not start in time"
-          exit 1
-
       - name: Health check
         run: |
           RESPONSE=$(curl -sf http://localhost:5500/health)

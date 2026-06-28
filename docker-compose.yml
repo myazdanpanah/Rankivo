@@ -29,20 +29,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file: .env
     environment:
       DATABASE_URL: postgresql://rankivo:rankivo_secret@db:5432/rankivo
       PORT: "5500"
-      FLASK_DEBUG: "0"
-      # ── AI Provider (uncomment one) ──
-      DEFAULT_AI_PROVIDER: ollama
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-      # OPENAI_API_KEY: ""
-      # ANTHROPIC_API_KEY: ""
-      # GOOGLE_API_KEY: ""
-      # ── Auth (change in production!) ──
-      ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: rankivo
-      SECRET_KEY: rankivo-change-me-in-production
     volumes:
       - ./data:/app/data
 
