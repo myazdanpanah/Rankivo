@@ -1,0 +1,68 @@
+name: CI — Docker Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -t rankivo:ci .
+
+      - name: Start services
+        run: docker compose up -d --wait
+
+      - name: Wait for app readiness
+        run: |
+          echo "Waiting for Flask app to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5500/health > /dev/null 2>&1; then
+              echo "App is ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "App did not start in time"
+          exit 1
+
+      - name: Health check
+        run: |
+          RESPONSE=$(curl -sf http://localhost:5500/health)
+          echo "$RESPONSE" | grep -q '"ok"'
+          echo "Health check passed: $RESPONSE"
+
+      - name: Verify app serves index
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5500/)
+          echo "GET / returned status: $STATUS"
+          [ "$STATUS" = "200" ]
+
+      - name: Verify auth endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5500/api/auth/check)
+          echo "GET /api/auth/check returned status: $STATUS"
+          [ "$STATUS" = "200" ]
+
+      - name: Verify trends status
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5500/api/trends/status)
+          echo "GET /api/trends/status returned status: $STATUS"
+          [ "$STATUS" = "200" ]
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs web db
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
