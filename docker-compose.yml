@@ -1,7 +1,5 @@
-"""
-Rankivo — SEO AI Tools
-Docker Compose: Flask app + optional PostgreSQL.
-"""
+# Rankivo — SEO AI Tools
+# Docker Compose: Flask app + PostgreSQL.
 
 services:
   # ── PostgreSQL (optional) ──────────────────────────
