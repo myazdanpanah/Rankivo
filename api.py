@@ -31,7 +31,7 @@ from database import (
 )
 from seo_recommendations import analyze_audit_for_recommendations, generate_quick_wins
 from notifications import send_email, send_slack_message, get_upcoming_deadlines, send_deadline_email, send_deadline_slack
-from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY, PORT, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, DIFFICULTY_SAMPLE_SIZE
+from config import DEFAULT_AI_PROVIDER, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY, PORT, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, DIFFICULTY_SAMPLE_SIZE, _safe_print
 import google_trends
 import seo_bing
 import technical_seo
@@ -153,6 +153,11 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/favicon.ico")
 def favicon():
     return "", 204
@@ -206,7 +211,7 @@ def api_keyword_research():
                     if "error" not in related:
                         result["trends_related"] = related
             except Exception as te:
-                print(f"[keyword_research] Trends fetch error: {te}")
+                _safe_print(f"[keyword_research] Trends fetch error: {te}")
                 result["trends_error"] = str(te)
         
         session = _get_session()
@@ -1201,7 +1206,7 @@ def api_pipeline_run():
                         })
             except Exception as e:
                 gap_analysis = {"status": "error", "error": str(e)}
-                print(f"[pipeline] Gap analysis failed: {e}")
+                _safe_print(f"[pipeline] Gap analysis failed: {e}")
 
         # Step 3: AI Analysis — rank the content plan and suggest which articles to write first
         ai_analysis = {}

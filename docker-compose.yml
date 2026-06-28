@@ -1,0 +1,52 @@
+"""
+Rankivo — SEO AI Tools
+Docker Compose: Flask app + optional PostgreSQL.
+"""
+
+services:
+  # ── PostgreSQL (optional) ──────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rankivo
+      POSTGRES_PASSWORD: rankivo_secret
+      POSTGRES_DB: rankivo
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rankivo -d rankivo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  # ── Rankivo Flask App ──────────────────────────────
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "5500:5500"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://rankivo:rankivo_secret@db:5432/rankivo
+      PORT: "5500"
+      FLASK_DEBUG: "0"
+      # ── AI Provider (uncomment one) ──
+      DEFAULT_AI_PROVIDER: ollama
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # OPENAI_API_KEY: ""
+      # ANTHROPIC_API_KEY: ""
+      # GOOGLE_API_KEY: ""
+      # ── Auth (change in production!) ──
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: rankivo
+      SECRET_KEY: rankivo-change-me-in-production
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  pgdata:

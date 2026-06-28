@@ -2,21 +2,10 @@
 SEO AI Tools - Google Trends Module
 Fetches trend data, interest over time, and related queries using pytrends.
 """
-import traceback
 import json
-import sys
 from typing import Optional
+from config import _safe_print
 
-
-def _safe_print(msg):
-    """Print that handles Unicode on Windows (CP1252) without crashing."""
-    try:
-        print(msg)
-    except UnicodeEncodeError:
-        try:
-            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
-        except Exception:
-            pass
 
 try:
     from pytrends.request import TrendReq as _TrendReqClass

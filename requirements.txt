@@ -16,3 +16,4 @@ hazm>=0.10.0
 pytrends>=4.9.2
 pyyaml>=6.0
 rake-nltk>=1.0.6
+numpy>=1.24.0

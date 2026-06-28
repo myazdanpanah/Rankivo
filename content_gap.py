@@ -8,22 +8,10 @@ import time
 import random
 import re
 import ipaddress
-import sys
-import io
 from collections import Counter
 from typing import Optional
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, suppress_output
 
-
-def _safe_print(msg):
-    """Print that handles Unicode on Windows (CP1252) without crashing."""
-    try:
-        print(msg)
-    except UnicodeEncodeError:
-        try:
-            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
-        except Exception:
-            pass
 
 
 def _random_ua() -> str:
@@ -73,10 +61,11 @@ def get_serp_competitors(keyword: str, num_results: int = 10) -> list[dict]:
     """
     try:
         from googlesearch import search as gsearch
-        import contextlib
         results = []
-        # Suppress googlesearch's internal print() to avoid CP1252 crashes
-        with contextlib.redirect_stdout(io.StringIO()):
+        # Suppress googlesearch's internal stdout/stderr to avoid CP1252 crashes
+        # The library captures sys.stdout at import time, so we must suppress
+        # all output for the ENTIRE call including iteration
+        with suppress_output():
             for r in gsearch(keyword, num_results=num_results, advanced=True):
                 url = getattr(r, "url", "")
                 if url and _is_safe_url(url):

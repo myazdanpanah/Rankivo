@@ -12,7 +12,6 @@ import json
 import re
 import time
 import random
-import sys
 import requests
 import numpy as np
 from typing import Optional
@@ -21,19 +20,10 @@ from difflib import SequenceMatcher
 from config import (
     OLLAMA_BASE_URL, OLLAMA_MODEL, REQUEST_TIMEOUT,
     EMBEDDING_MODEL, LLM_INTENT_CLASSIFICATION, SEMANTIC_CLUSTERING,
+    _safe_print, suppress_output,
 )
 from keyword_research import classify_intent as _heuristic_intent
 
-
-def _safe_print(msg):
-    """Print that handles Unicode on Windows (CP1252) without crashing."""
-    try:
-        print(msg)
-    except UnicodeEncodeError:
-        try:
-            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
-        except Exception:
-            pass
 
 
 # ──────────────────────────────────────────────
@@ -576,9 +566,8 @@ def _get_serper_fallback(query: str, num: int = 10) -> list[dict]:
     """Fallback SERP scraping using googlesearch-python."""
     try:
         from googlesearch import search as gsearch
-        import contextlib, io as _io
         results = []
-        with contextlib.redirect_stdout(_io.StringIO()):
+        with suppress_output():
             for r in gsearch(query, num_results=num, advanced=True):
                 results.append({
                     "title": getattr(r, "title", ""),

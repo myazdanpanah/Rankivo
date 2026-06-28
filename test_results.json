@@ -25,9 +25,17 @@
     }
   },
   "SEO Audit": {
-    "status": "FAIL",
-    "error": "Failed to fetch URL: HTTPSConnectionPool(host='nabzgroup.com', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'nabzgroup.com'. (_ssl.c:1032)\")))",
-    "traceback": "Traceback (most recent call last):\n  File \"C:\\SEO AI Tools\\test_components.py\", line 33, in run_test\n    data = fn()\n  File \"C:\\SEO AI Tools\\test_components.py\", line 88, in test_audit\n    assert \"error\" not in d, d.get(\"error\")\n           ^^^^^^^^^^^^^^^^\nAssertionError: Failed to fetch URL: HTTPSConnectionPool(host='nabzgroup.com', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'nabzgroup.com'. (_ssl.c:1032)\")))\n"
+    "status": "PASS",
+    "data": {
+      "score": 84,
+      "word_count": 600,
+      "issues_count": 3,
+      "links_internal": 22,
+      "links_external": 0,
+      "images_total": 131,
+      "images_with_alt": 90,
+      "text_to_html_ratio": 1.8
+    }
   },
   "Content Gap": {
     "status": "FAIL",
@@ -95,7 +103,7 @@
   "Article Generation": {
     "status": "PASS",
     "data": {
-      "length": 1717,
+      "length": 2037,
       "has_content": true
     }
   },

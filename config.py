@@ -3,6 +3,7 @@ SEO AI Tools - Configuration
 Central config for API keys, model defaults, and settings.
 """
 import os
+import sys
 
 # --- AI Provider Settings ---
 # Set your API keys via environment variables or in a .env file
@@ -98,3 +99,45 @@ SEMANTIC_CLUSTERING = os.getenv("SEMANTIC_CLUSTERING", "1") == "1"
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "rankivo")
 SECRET_KEY = os.getenv("SECRET_KEY", "rankivo-change-me-in-production")
+
+
+# ──────────────────────────────────────────────
+# Shared Utilities
+# ──────────────────────────────────────────────
+
+
+def _safe_print(msg):
+    """Print that handles Unicode on Windows (CP1252) without crashing."""
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        try:
+            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
+        except Exception:
+            pass
+
+
+class _NullWriter:
+    """Discards all writes silently."""
+    def write(self, s): pass
+    def flush(self): pass
+    @property
+    def buffer(self):
+        return self
+
+
+class suppress_output:
+    """Context manager that suppresses both stdout and stderr.
+    Use around third-party library calls (e.g. googlesearch) that may
+    print non-ASCII text and crash on Windows CP1252."""
+    def __enter__(self):
+        self._orig_stdout = sys.stdout
+        self._orig_stderr = sys.stderr
+        self._null = _NullWriter()
+        sys.stdout = self._null
+        sys.stderr = self._null
+        return self
+
+    def __exit__(self, *args):
+        sys.stdout = self._orig_stdout
+        sys.stderr = self._orig_stderr

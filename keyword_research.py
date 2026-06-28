@@ -6,24 +6,15 @@ import requests
 import json
 import time
 import random
-import sys
 from config import (
     REQUEST_TIMEOUT,
     USER_AGENTS,
     DEFAULT_NUM_SUGGESTIONS,
     DEFAULT_NUM_SERP_RESULTS,
+    _safe_print,
+    suppress_output,
 )
 
-
-def _safe_print(msg):
-    """Print that handles Unicode on Windows (CP1252) without crashing."""
-    try:
-        print(msg)
-    except UnicodeEncodeError:
-        try:
-            sys.stdout.buffer.write((str(msg) + '\n').encode('utf-8'))
-        except Exception:
-            pass
 
 
 def _random_ua() -> str:
@@ -114,10 +105,9 @@ def get_serp_results(query: str, num_results: int = DEFAULT_NUM_SERP_RESULTS) ->
     """
     try:
         from googlesearch import search as gsearch
-        import contextlib, io as _io
         results = []
-        # Suppress googlesearch's internal print() to avoid CP1252 crashes
-        with contextlib.redirect_stdout(_io.StringIO()):
+        # Suppress googlesearch's internal stdout/stderr to avoid CP1252 crashes
+        with suppress_output():
             for r in gsearch(query, num_results=num_results, advanced=True):
                 results.append({
                     "title": getattr(r, "title", ""),
