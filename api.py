@@ -39,6 +39,7 @@ import technical_seo
 import llm_keyword_intelligence as llm_intel
 from users import verify_user, create_user, delete_user, change_password, get_all_users, get_setting, set_setting, get_all_settings
 import content_gap
+from persian_intent_classifier import classify_persian_intent_heuristic, classify_persian_intents_batch, get_persian_classifier_status
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = SECRET_KEY
@@ -1658,6 +1659,43 @@ def api_content_gap_extract():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+
+# ──────────────────────────────────────────────
+# 20. Persian Intent Classification
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/persian-intent/classify", methods=["POST"])
+def api_persian_intent_classify():
+    """Classify Persian search intent for one or more keywords."""
+    try:
+        data = request.json or {}
+        keywords = data.get("keywords", [])
+        keyword = data.get("keyword", "")
+
+        if keyword and not keywords:
+            keywords = [keyword]
+        if not keywords:
+            return jsonify({"error": "At least one keyword is required"}), 400
+
+        if len(keywords) == 1:
+            result = classify_persian_intent_heuristic(keywords[0])
+            return jsonify({"keyword": keywords[0], "result": result})
+        else:
+            results = classify_persian_intents_batch(keywords)
+            return jsonify({"results": results, "count": len(results)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/persian-intent/status")
+def api_persian_intent_status():
+    """Check Persian intent classifier capabilities."""
+    return jsonify(get_persian_classifier_status())
 
 
 if __name__ == "__main__":

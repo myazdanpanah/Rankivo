@@ -16,6 +16,33 @@ def _random_ua() -> str:
 
 
 # ──────────────────────────────────────────────
+# Research Cache (avoids re-fetching same topic)
+# ──────────────────────────────────────────────
+
+_research_cache: dict[str, dict] = {}
+_MAX_CACHE_SIZE = 50
+
+
+def get_cached_research(topic: str) -> dict | None:
+    """Get cached research for a topic, or None if not cached."""
+    return _research_cache.get(topic.lower().strip())
+
+
+def _cache_research(topic: str, result: dict) -> None:
+    """Cache a research result."""
+    key = topic.lower().strip()
+    if len(_research_cache) >= _MAX_CACHE_SIZE:
+        oldest_key = next(iter(_research_cache))
+        _research_cache.pop(oldest_key, None)
+    _research_cache[key] = result
+
+
+def clear_research_cache() -> None:
+    """Clear the research cache."""
+    _research_cache.clear()
+
+
+# ──────────────────────────────────────────────
 # 1. SERP Search — find top results for a topic
 # ──────────────────────────────────────────────
 
@@ -48,7 +75,7 @@ def search_google(query: str, num_results: int = 8) -> list[dict]:
 # ──────────────────────────────────────────────
 
 def extract_page_content(url: str) -> dict:
-    """Fetch a page and extract structured content: title, meta, headings, body text, lists, tables."""
+    """Fetch a page and extract structured content."""
     try:
         headers = {"User-Agent": _random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
@@ -57,45 +84,30 @@ def extract_page_content(url: str) -> dict:
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # Title
         title_tag = soup.find("title")
         title = title_tag.get_text(strip=True) if title_tag else ""
 
-        # Meta description
         meta_desc = soup.find("meta", attrs={"name": "description"})
         description = meta_desc.get("content", "").strip() if meta_desc else ""
 
-        # Open Graph / Twitter meta
-        og_title = soup.find("meta", attrs={"property": "og:title"})
-        og_desc = soup.find("meta", attrs={"property": "og:description"})
-
-        # Canonical URL
-        canonical = soup.find("link", attrs={"rel": "canonical"})
-        canonical_url = canonical.get("href", "") if canonical else ""
-
-        # Headings hierarchy
         headings = {}
         for level in ["h1", "h2", "h3", "h4"]:
             tags = soup.find_all(level)
             headings[level] = [t.get_text(strip=True) for t in tags if t.get_text(strip=True)]
 
-        # Remove non-content elements
         for tag in soup.find_all(["nav", "footer", "header", "script", "style", "noscript", "aside"]):
             tag.decompose()
 
-        # Extract main content
         main_content = soup.find("main") or soup.find("article") or soup.find("body")
         body_text = main_content.get_text(separator=" ", strip=True) if main_content else ""
 
-        # Extract lists (ol/ul) for key points
         lists = []
         if main_content:
             for li in main_content.find_all(["ol", "ul"]):
                 items = [li.get_text(strip=True) for li in li.find_all("li") if li.get_text(strip=True)]
                 if items:
-                    lists.append(items[:10])  # cap at 10 items per list
+                    lists.append(items[:10])
 
-        # Extract table data (first 3 tables)
         tables = []
         if main_content:
             for table in main_content.find_all("table")[:3]:
@@ -107,16 +119,14 @@ def extract_page_content(url: str) -> dict:
                 if rows:
                     tables.append(rows)
 
-        # Word count
         word_count = len(body_text.split())
 
         return {
             "url": url,
             "title": title,
             "description": description,
-            "canonical_url": canonical_url,
             "headings": headings,
-            "body_text": body_text[:15000],  # cap at 15K chars
+            "body_text": body_text[:15000],
             "word_count": word_count,
             "lists": lists,
             "tables": tables,
@@ -134,7 +144,6 @@ def extract_page_content(url: str) -> dict:
 def extract_key_facts(text: str) -> list[str]:
     """Extract factual statements, statistics, and key claims from text."""
     facts = []
-    # Patterns that indicate facts/statistics
     patterns = [
         r'\d+[\.,]?\d*\s*(?:%|percent|million|billion|thousand|trillion)',
         r'(?:according to|research shows|studies show|data indicates|reports show)[^.]*\.',
@@ -153,7 +162,6 @@ def extract_key_facts(text: str) -> list[str]:
             if re.search(pattern, sent, re.IGNORECASE):
                 facts.append(sent)
                 break
-    # Deduplicate and cap
     seen = set()
     unique_facts = []
     for f in facts:
@@ -171,8 +179,6 @@ def extract_key_facts(text: str) -> list[str]:
 def identify_content_gaps(topic: str, competitor_headings: list[str], user_keywords: list[str] = None) -> list[str]:
     """Identify angles and subtopics competitors cover that could be expanded upon."""
     gaps = []
-
-    # Common high-value subtopics to check
     subtopic_hints = {
         "guide": ["getting started", "step by step", "how to", "tutorial", "beginner"],
         "comparison": ["vs", "comparison", "alternative", "difference between"],
@@ -183,14 +189,11 @@ def identify_content_gaps(topic: str, competitor_headings: list[str], user_keywo
         "future": ["future", "trend", "prediction", "2025", "2026", "upcoming"],
         "resources": ["tool", "software", "platform", "resource", "template", "checklist"],
     }
-
     all_headings_lower = " ".join(competitor_headings).lower()
-
     for category, hints in subtopic_hints.items():
         covered = any(hint in all_headings_lower for hint in hints)
         if not covered:
             gaps.append(f"Missing subtopic: {category} angle (competitors don't cover this well)")
-
     return gaps[:8]
 
 
@@ -205,16 +208,21 @@ def research_topic(
     num_results: int = 6,
 ) -> dict:
     """
-    Full topic research pipeline:
-    1. Search Google for the topic
-    2. Fetch and analyze top-ranking pages
-    3. Extract key facts, headings, content structure
-    4. Identify content gaps and unique angles
-
-    Returns a comprehensive research report.
+    Full topic research pipeline with caching:
+    1. Check cache first
+    2. Search Google for the topic
+    3. Fetch and analyze top-ranking pages
+    4. Extract key facts, headings, content structure
+    5. Identify content gaps and unique angles
     """
     if target_keywords is None:
         target_keywords = []
+
+    # Check cache first
+    cached = get_cached_research(topic)
+    if cached is not None:
+        _safe_print(f"[topic_researcher] Using cached research for '{topic}'")
+        return cached
 
     research = {
         "topic": topic,
@@ -230,16 +238,12 @@ def research_topic(
 
     # Step 1: Search Google
     _safe_print(f"[topic_researcher] Searching Google for '{topic}'...")
-    search_query = topic
-    if language == "fa":
-        # For Persian, search in Persian
-        search_query = topic
-
-    serp_results = search_google(search_query, num_results=num_results)
+    serp_results = search_google(topic, num_results=num_results)
     research["search_results"] = serp_results
 
     if not serp_results:
         research["research_summary"] = "No search results found. Article will be based on provided keywords only."
+        _cache_research(topic, research)
         return research
 
     # Step 2: Fetch and analyze top pages
@@ -269,25 +273,20 @@ def research_topic(
                 "has_tables": len(page.get("tables", [])) > 0,
             })
 
-            # Collect all headings
             for level in ["h1", "h2", "h3"]:
                 all_headings.extend(page.get("headings", {}).get(level, []))
 
-            # Extract facts from body text
             facts = extract_key_facts(page.get("body_text", ""))
             all_facts.extend(facts)
 
-            # Collect body text for summary
             body = page.get("body_text", "")
             if body:
                 all_body_texts.append(body[:3000])
 
-        # Rate limiting
         if i < len(serp_results) - 1:
             time.sleep(random.uniform(0.8, 1.5))
 
     # Step 3: Consolidate findings
-    # Deduplicate headings
     seen_headings = set()
     unique_headings = []
     for h in all_headings:
@@ -297,7 +296,6 @@ def research_topic(
             unique_headings.append(h)
     research["top_headings"] = unique_headings[:30]
 
-    # Deduplicate facts
     seen_facts = set()
     unique_facts = []
     for f in all_facts:
@@ -316,16 +314,15 @@ def research_topic(
     avg_word_count = 0
     if research["competitor_analysis"]:
         word_counts = [c.get("word_count", 0) for c in research["competitor_analysis"]]
-        avg_word_count = sum(wc for wc in word_counts if wc > 0) // max(len([wc for wc in word_counts if wc > 0]), 1)
+        valid_wc = [wc for wc in word_counts if wc > 0]
+        avg_word_count = sum(valid_wc) // max(len(valid_wc), 1)
 
-    # Analyze which heading levels competitors use
     h2_counts = Counter()
     for comp in research["competitor_analysis"]:
         for h2 in comp.get("h2", []):
             h2_lower = h2.lower().strip()
             h2_counts[h2_lower] += 1
 
-    # Find most common H2 patterns
     common_h2_patterns = h2_counts.most_common(10)
 
     research["recommended_structure"] = {
@@ -336,7 +333,6 @@ def research_topic(
         "has_tables_in_competitors": any(c.get("has_tables") for c in research["competitor_analysis"]),
     }
 
-    # Step 6: Generate research summary
     num_competitors = len(research["competitor_analysis"])
     num_facts = len(research["key_facts"])
     num_gaps = len(research["content_gaps"])
@@ -349,5 +345,8 @@ def research_topic(
     )
 
     _safe_print(f"[topic_researcher] {research['research_summary']}")
+
+    # Cache the result
+    _cache_research(topic, research)
 
     return research
