@@ -109,9 +109,11 @@
     }
   },
   "Article Generation": {
-    "status": "FAIL",
-    "error": "HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it\"))",
-    "traceback": "Traceback (most recent call last):\n  File \"C:\\Rankivo\\test_components.py\", line 33, in run_test\n    data = fn()\n  File \"C:\\Rankivo\\test_components.py\", line 221, in test_article\n    assert \"error\" not in d, d.get(\"error\")\n           ^^^^^^^^^^^^^^^^\nAssertionError: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it\"))\n"
+    "status": "PASS",
+    "data": {
+      "length": 2232,
+      "has_content": true
+    }
   },
   "Full Pipeline": {
     "status": "PASS",
@@ -119,7 +121,7 @@
       "total_keywords": 12,
       "total_clusters": 1,
       "total_articles": 12,
-      "has_ai_analysis": false,
+      "has_ai_analysis": true,
       "content_plan_items": 1
     }
   }

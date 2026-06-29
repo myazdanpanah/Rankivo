@@ -12,10 +12,11 @@ flask-limiter>=3.5.0
 bcrypt>=4.1.0
 reportlab
 scikit-learn>=1.3.0
-hazm>=0.10.0
+# hazm>=0.10.0  # disabled: incompatible with Python 3.14+
 pytrends>=4.9.2
 pyyaml>=6.0
 rake-nltk>=1.0.6
 numpy>=1.24.0
 gunicorn>=22.0.0
 python-dotenv>=1.0.0
+parsivar>=0.2.1

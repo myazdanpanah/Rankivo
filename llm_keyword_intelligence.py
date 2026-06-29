@@ -173,41 +173,40 @@ Rules:
 def _normalize_persian(text: str) -> str:
     """Normalize Persian text for consistent processing."""
     try:
+        from persian_nlp import normalize_persian
+        return normalize_persian(text)
+    except ImportError:
+        pass
+    try:
         from hazm import Normalizer
         normalizer = Normalizer()
         return normalizer.normalize(text)
     except ImportError:
-        # Comprehensive normalization without hazm
-        import unicodedata
-        # Arabic Yeh/Keh → Persian variants
+        # Basic normalization without hazm or parsivar
         text = text.replace('ي', 'ی').replace('ك', 'ک')
         text = text.replace('ؤ', 'و').replace('إ', 'ا').replace('أ', 'ا')
-        text = text.replace('ٱ', 'ا').replace('ٮ', 'ب').replace('ڡ', 'ف')
-        # Remove tatweel (kashida)
-        text = text.replace('\u0640', '')
-        # Normalize zero-width non-joiner variants
-        text = text.replace('\u200c', '\u200c')  # keep ZWNJ
-        text = text.replace('\ufef9', '')  # remove ligatures
-        # Arabic numeral variants → ASCII
+        text = text.replace('\u0640', '')  # remove tatweel
         arabic_digits = '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669'
         for i, d in enumerate(arabic_digits):
             text = text.replace(d, str(i))
-        # Persian digits
         persian_digits = '\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9'
         for i, d in enumerate(persian_digits):
             text = text.replace(d, str(i))
-        # Normalize whitespace
         text = ' '.join(text.split())
         return text
 
 
 def _is_persian(text: str) -> bool:
-    """Check if text contains Persian characters."""
-    persian_range = range(0x0600, 0x06FF + 1)
-    arabic_range = range(0xFB50, 0xFDFF + 1)
-    extended_arabic = range(0xFE70, 0xFEFF + 1)
-    persian_count = sum(1 for c in text if ord(c) in persian_range or ord(c) in arabic_range or ord(c) in extended_arabic)
-    return persian_count > len(text) * 0.3
+    """Check if text contains Persian characters (delegates to persian_nlp)."""
+    try:
+        from persian_nlp import is_persian_text
+        return is_persian_text(text)
+    except ImportError:
+        persian_range = range(0x0600, 0x06FF + 1)
+        arabic_range = range(0xFB50, 0xFDFF + 1)
+        extended_arabic = range(0xFE70, 0xFEFF + 1)
+        persian_count = sum(1 for c in text if ord(c) in persian_range or ord(c) in arabic_range or ord(c) in extended_arabic)
+        return persian_count > len(text) * 0.3
 
 
 def classify_intent_llm(keyword: str, model: str = "") -> str:
