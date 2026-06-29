@@ -24,6 +24,11 @@ data/
 test_results.json
 test_results.txt
 
+# Large binaries
+OllamaSetup.exe
+
+test_results.txt
+
 # OS
 Thumbs.db
 .DS_Store
