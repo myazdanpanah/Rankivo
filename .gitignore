@@ -20,6 +20,10 @@ data/
 *.swp
 *.swo
 
+# Test output
+test_results.json
+test_results.txt
+
 # OS
 Thumbs.db
 .DS_Store

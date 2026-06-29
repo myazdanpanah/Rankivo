@@ -177,9 +177,27 @@ def _normalize_persian(text: str) -> str:
         normalizer = Normalizer()
         return normalizer.normalize(text)
     except ImportError:
-        # Basic normalization without hazm
+        # Comprehensive normalization without hazm
+        import unicodedata
+        # Arabic Yeh/Keh → Persian variants
         text = text.replace('ي', 'ی').replace('ك', 'ک')
         text = text.replace('ؤ', 'و').replace('إ', 'ا').replace('أ', 'ا')
+        text = text.replace('ٱ', 'ا').replace('ٮ', 'ب').replace('ڡ', 'ف')
+        # Remove tatweel (kashida)
+        text = text.replace('\u0640', '')
+        # Normalize zero-width non-joiner variants
+        text = text.replace('\u200c', '\u200c')  # keep ZWNJ
+        text = text.replace('\ufef9', '')  # remove ligatures
+        # Arabic numeral variants → ASCII
+        arabic_digits = '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669'
+        for i, d in enumerate(arabic_digits):
+            text = text.replace(d, str(i))
+        # Persian digits
+        persian_digits = '\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9'
+        for i, d in enumerate(persian_digits):
+            text = text.replace(d, str(i))
+        # Normalize whitespace
+        text = ' '.join(text.split())
         return text
 
 
