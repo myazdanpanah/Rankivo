@@ -18,6 +18,7 @@ from flask_limiter.util import get_remote_address
 from keyword_research import run_keyword_research
 from pillar_cluster import build_pillar_cluster_map
 from content_generator import generate_article, generate_text, get_available_providers
+from topic_researcher import research_topic
 from seo_audit import audit_url
 from batch_audit import parse_csv_urls, batch_audit, generate_comparison_table, generate_sample_csv
 from content_calendar import (
@@ -303,19 +304,43 @@ def api_generate_article():
 
         language = data.get("language", "en")
 
+        # Step 1: Research the topic via internet search
+        _safe_print(f"[article] Researching topic: {topic}...")
+        try:
+            research_data = research_topic(
+                topic=topic,
+                target_keywords=keywords,
+                language=language,
+                num_results=6,
+            )
+        except Exception as re:
+            _safe_print(f"[article] Research failed, continuing without: {re}")
+            research_data = None
+
+        # Step 2: Generate the article with research context
         article = generate_article(
             topic=topic,
             target_keywords=keywords,
             provider=provider,
             people_also_ask=kw_data.get("people_also_ask"),
             serp_context=kw_data.get("serp_results"),
+            research_data=research_data,
             word_count=word_count,
             tone=tone,
             style=style,
             language=language,
         )
 
-        return jsonify({"article": article, "topic": topic})
+        return jsonify({
+            "article": article,
+            "topic": topic,
+            "research": {
+                "summary": research_data.get("research_summary", "") if research_data else "Research skipped",
+                "competitors_analyzed": len(research_data.get("competitor_analysis", [])) if research_data else 0,
+                "key_facts_found": len(research_data.get("key_facts", [])) if research_data else 0,
+                "content_gaps": len(research_data.get("content_gaps", [])) if research_data else 0,
+            } if research_data else None,
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -369,12 +394,19 @@ def api_generate_article_batch():
                 continue
 
             try:
+                # Research each topic before generating
+                try:
+                    batch_research = research_topic(topic=topic, target_keywords=keywords, language=language, num_results=5)
+                except Exception:
+                    batch_research = None
+
                 article_text = generate_article(
                     topic=topic,
                     target_keywords=keywords,
                     provider=provider,
                     people_also_ask=people_also_ask,
                     serp_context=serp_context,
+                    research_data=batch_research,
                     word_count=word_count,
                     tone=tone,
                     style=style,

@@ -121,6 +121,7 @@ def build_article_prompt(
     target_keywords: list[str],
     people_also_ask: list[str] | None = None,
     serp_context: list[dict] | None = None,
+    research_data: dict | None = None,
     word_count: int = DEFAULT_ARTICLE_WORD_COUNT,
     tone: str = DEFAULT_ARTICLE_TONE,
     style: str = DEFAULT_ARTICLE_STYLE,
@@ -128,25 +129,74 @@ def build_article_prompt(
 ) -> str:
     """Build a detailed prompt for SEO article generation."""
 
+    primary_kw = target_keywords[0] if target_keywords else topic
     kw_list = ", ".join(f'"{k}"' for k in target_keywords[:20])
-    paa_section = ""
-    if people_also_ask:
-        questions = "\n".join(f"  - {q}" for q in people_also_ask[:10])
-        paa_section = f"""
-## People Also Ask (address these in your article):
-{questions}
-"""
 
+    # ── Research context (from internet research) ──
+    research_section = ""
+    if research_data:
+        # Key facts extracted from top content
+        facts = research_data.get("key_facts", [])
+        if facts:
+            facts_text = "\n".join(f"  - {f}" for f in facts[:15])
+            research_section += f"\n## Key Facts & Statistics (verified from top sources):\n{facts_text}\n"
+
+        # Content gaps to exploit
+        gaps = research_data.get("content_gaps", [])
+        if gaps:
+            gaps_text = "\n".join(f"  - {g}" for g in gaps[:8])
+            research_section += f"\n## Content Gaps to Exploit (competitors miss these):\n{gaps_text}\n"
+
+        # Recommended structure from competitor analysis
+        rec = research_data.get("recommended_structure", {})
+        if rec:
+            suggested_wc = rec.get("suggested_word_count", word_count)
+            common_h2s = rec.get("common_h2_patterns", [])[:5]
+            research_section += f"\n## Competitor Analysis:\n"
+            research_section += f"- Competitor average word count: {rec.get('competitor_avg_word_count', 'N/A')}\n"
+            research_section += f"- Recommended word count: {suggested_wc}\n"
+            if common_h2s:
+                research_section += f"- Common H2 patterns in top results: {', '.join(common_h2s[:5])}\n"
+            if rec.get("has_lists_in_competitors"):
+                research_section += "- Top competitors use lists/bullet points\n"
+            if rec.get("has_tables_in_competitors"):
+                research_section += "- Top competitors use tables/comparisons\n"
+
+        # Competitor headings for structure inspiration
+        top_headings = research_data.get("top_headings", [])
+        if top_headings:
+            h2s = [h for h in top_headings if h and len(h) > 5][:15]
+            if h2s:
+                research_section += f"\n## Competitor Heading Structure (DO NOT copy, use for inspiration):\n"
+                for h in h2s:
+                    research_section += f"  - {h}\n"
+
+    # ── People Also Ask ──
+    paa_section = ""
+    all_paa = list(people_also_ask or [])
+    # Also use PAA from research data
+    if research_data:
+        # PAA might be in search results snippets
+        pass
+    if all_paa:
+        questions = "\n".join(f"  - {q}" for q in all_paa[:12])
+        paa_section = f"\n## People Also Ask (answer ALL of these in your article):\n{questions}\n"
+
+    # ── SERP Context (competitor snippets) ──
     serp_section = ""
-    if serp_context:
+    serp_data = list(serp_context or [])
+    if research_data:
+        for comp in research_data.get("competitor_analysis", [])[:5]:
+            serp_data.append({
+                "title": comp.get("title", ""),
+                "snippet": comp.get("description", ""),
+            })
+    if serp_data:
         snippets = "\n".join(
             f"  - {r.get('title', '')}: {r.get('snippet', '')[:200]}"
-            for r in serp_context[:5]
+            for r in serp_data[:5]
         )
-        serp_section = f"""
-## Top-ranking competitor content to surpass (do NOT copy):
-{snippets}
-"""
+        serp_section = f"\n## Top-ranking competitor content to surpass (do NOT copy):\n{snippets}\n"
 
     # Language-specific instructions
     if language == "fa":
@@ -159,26 +209,52 @@ def build_article_prompt(
     else:
         lang_instruction = f"Write in {language} language."
 
-    return f"""You are an expert SEO content writer. Write a comprehensive, engaging {style} on the topic: "{topic}".
+    return f"""You are an expert SEO content writer. Write a comprehensive, fully SEO-optimized {style} on the topic: "{topic}".
+
+## PRIMARY GOAL:
+Create the BEST possible article on this topic that would rank #1 on Google. It must be more comprehensive, better structured, and more valuable than anything currently ranking.
 
 ## Requirements:
 1. **Word count**: Aim for approximately {word_count} words.
 2. **Tone**: {tone}.
-3. **Primary keyword**: "{target_keywords[0] if target_keywords else topic}"
-4. **Secondary keywords** (use naturally throughout): {kw_list}
-5. **SEO structure**:
-   - Compelling H1 title (include primary keyword)
-   - Meta description (150-160 chars, include primary keyword)
-   - Introduction hook in the first paragraph
-   - Clear H2/H3 subheadings
-   - Use bullet points and numbered lists where appropriate
-   - Conclusion with a call to action
-6. **Internal linking suggestions**: Mark spots with [INTERNAL LINK: topic] where internal links should go.
-7. **Write in Markdown format.**
-8. **Language**: {lang_instruction}
-{paa_section}{serp_section}
+3. **Primary keyword**: "{primary_kw}"
+4. **Secondary keywords** (use naturally throughout, not stuffed): {kw_list}
+5. **SEO-Optimized Structure:**
+   - H1 title: Compelling, includes primary keyword, under 60 chars if possible
+   - Meta description: 150-160 chars, includes primary keyword and a CTA
+   - URL slug suggestion on the line after meta description
+   - Hook the reader in the first 2 sentences of the introduction
+   - Clear H2 and H3 subheadings (include secondary keywords naturally)
+   - Use bullet points, numbered lists, and tables where appropriate
+   - Bold key terms and takeaways
+   - Internal linking suggestions: Mark spots with [INTERNAL LINK: topic/keyword]
+   - Image suggestions: Mark spots with [IMAGE: description of image to include]
+   - FAQ section at the end (3-5 questions from People Also Ask)
+   - Strong conclusion with call to action
+6. **Write in Markdown format.**
+7. **Language**: {lang_instruction}
+{research_section}{paa_section}{serp_section}
 
-Write the complete article now. Start with the H1 title on the first line.
+## OUTPUT FORMAT:
+Start with these SEO metadata lines, then the article:
+
+**SEO Metadata:**
+- Title: [your H1 title]
+- Meta Description: [150-160 char description]
+- URL Slug: [suggested slug]
+- Focus Keyword: {primary_kw}
+- Secondary Keywords: {kw_list}
+
+**Article Body:**
+[Write the full article in Markdown]
+
+**FAQ Section:**
+[Write 3-5 FAQ items with questions and answers]
+
+**Schema Markup (JSON-LD):**
+[Provide the Article and FAQPage JSON-LD schema]
+
+Write the complete article now.
 """
 
 
@@ -188,6 +264,7 @@ def generate_article(
     provider: str = "ollama",
     people_also_ask: list[str] | None = None,
     serp_context: list[dict] | None = None,
+    research_data: dict | None = None,
     word_count: int = DEFAULT_ARTICLE_WORD_COUNT,
     tone: str = DEFAULT_ARTICLE_TONE,
     style: str = DEFAULT_ARTICLE_STYLE,
@@ -199,6 +276,7 @@ def generate_article(
         target_keywords=target_keywords,
         people_also_ask=people_also_ask,
         serp_context=serp_context,
+        research_data=research_data,
         word_count=word_count,
         tone=tone,
         style=style,
