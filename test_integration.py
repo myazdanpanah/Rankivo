@@ -89,7 +89,7 @@ def log(test_name, status, data=None):
 safe_print("\n[Auth] Logging in...")
 resp = requests.post(f"{BASE}/api/auth/login", json={
     "username": "admin",
-    "password": "rankivo"
+    "password": "admin12345"
 })
 if resp.status_code == 200:
     token = resp.json().get("token", "")

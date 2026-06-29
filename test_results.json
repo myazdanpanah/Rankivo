@@ -38,14 +38,22 @@
     }
   },
   "Content Gap": {
-    "status": "FAIL",
-    "error": "'charmap' codec can't encode characters in position 43-46: character maps to <undefined>",
-    "traceback": "Traceback (most recent call last):\n  File \"C:\\SEO AI Tools\\test_components.py\", line 33, in run_test\n    data = fn()\n  File \"C:\\SEO AI Tools\\test_components.py\", line 108, in test_gap\n    assert \"error\" not in d, d.get(\"error\")\n           ^^^^^^^^^^^^^^^^\nAssertionError: 'charmap' codec can't encode characters in position 43-46: character maps to <undefined>\n"
+    "status": "PASS",
+    "data": {
+      "total_gaps": 0,
+      "competitors_analyzed": 0,
+      "coverage_pct": 0,
+      "top_gaps": []
+    }
   },
   "LLM Keyword Intelligence": {
-    "status": "FAIL",
-    "error": "'charmap' codec can't encode characters in position 39-42: character maps to <undefined>",
-    "traceback": "Traceback (most recent call last):\n  File \"C:\\SEO AI Tools\\test_components.py\", line 33, in run_test\n    data = fn()\n  File \"C:\\SEO AI Tools\\test_components.py\", line 134, in test_llm\n    assert \"error\" not in d, d.get(\"error\")\n           ^^^^^^^^^^^^^^^^\nAssertionError: 'charmap' codec can't encode characters in position 39-42: character maps to <undefined>\n"
+    "status": "PASS",
+    "data": {
+      "intent_count": 10,
+      "cluster_count": 1,
+      "difficulty_count": 3,
+      "methods": {}
+    }
   },
   "Technical: robots.txt": {
     "status": "PASS",
@@ -101,11 +109,9 @@
     }
   },
   "Article Generation": {
-    "status": "PASS",
-    "data": {
-      "length": 2037,
-      "has_content": true
-    }
+    "status": "FAIL",
+    "error": "HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it\"))",
+    "traceback": "Traceback (most recent call last):\n  File \"C:\\Rankivo\\test_components.py\", line 33, in run_test\n    data = fn()\n  File \"C:\\Rankivo\\test_components.py\", line 221, in test_article\n    assert \"error\" not in d, d.get(\"error\")\n           ^^^^^^^^^^^^^^^^\nAssertionError: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it\"))\n"
   },
   "Full Pipeline": {
     "status": "PASS",
@@ -113,7 +119,7 @@
       "total_keywords": 12,
       "total_clusters": 1,
       "total_articles": 12,
-      "has_ai_analysis": true,
+      "has_ai_analysis": false,
       "content_plan_items": 1
     }
   }

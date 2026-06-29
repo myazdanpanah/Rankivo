@@ -42,7 +42,7 @@ def run_test(name, fn):
 
 # --- Login ---
 p("\n--- AUTH ---")
-resp = requests.post(f"{BASE}/api/auth/login", json={"username": "admin", "password": "rankivo"})
+resp = requests.post(f"{BASE}/api/auth/login", json={"username": "admin", "password": "admin12345"})
 token = resp.json()["token"]
 H = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 p("  Logged in OK")
@@ -134,8 +134,8 @@ def test_llm():
     assert "error" not in d, d.get("error")
     return {
         "intent_count": len(d.get("intent_map", {})),
-        "cluster_count": len(d.get("clusters", {}).get("clusters", [])),
-        "difficulty_count": len(d.get("difficulty", {}).get("results", [])),
+        "cluster_count": len(d.get("clusters", [])),
+        "difficulty_count": len(d.get("difficulties", {})),
         "methods": d.get("methods_used", {}),
     }
 run_test("LLM Keyword Intelligence", test_llm)
