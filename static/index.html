@@ -1387,7 +1387,7 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" data-i18n="seedKeyword" for="seedKeyword">Seed Keyword</label>
+            <label class="form-label" data-i18n="seedKeyword" for="kwSeed">Seed Keyword</label>
             <input type="text" class="form-input" id="kwSeed" placeholder="e.g. python web development" onkeydown="if(event.key==='Enter') runKeywordResearch()">
           </div>
           <div class="form-group">
@@ -1553,7 +1553,7 @@ tr:hover td { background: var(--bg-input); }
       <div class="card" style="margin-bottom:20px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
-            <label class="form-label" data-i18n="contentGapSeedLabel" for="gapSeedKeyword">Target Keyword</label>
+            <label class="form-label" data-i18n="contentGapSeedLabel" for="gapSeed">Target Keyword</label>
             <input class="form-input" id="gapSeed" placeholder="e.g. seo tools" style="margin-bottom:12px;">
             <label class="form-label" data-i18n="contentGapCompetitorsLabel" for="gapCompetitors">Competitor URLs (one per line, optional)</label>
             <textarea class="form-input" id="gapCompetitors" rows="4" placeholder="https://competitor1.com&#10;https://competitor2.com" style="margin-bottom:12px;font-family:monospace;font-size:0.85rem;"></textarea>
@@ -1724,7 +1724,7 @@ tr:hover td { background: var(--bg-input); }
           </button>
         </div>
         <div class="form-group">
-          <label class="form-label" data-i18n="uploadCsv" for="batchCsv">Upload CSV (columns: url, keyword, page_type)</label>
+          <label class="form-label" data-i18n="uploadCsv" for="batchFile">Upload CSV (columns: url, keyword, page_type)</label>
           <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;" data-i18n="optionalColumns">Optional columns: keyword, page_type (homepage/product/blog/generic/auto)</div>
           <input type="file" class="form-input" id="batchFile" accept=".csv" onchange="handleBatchFile(event)">
         </div>
@@ -2115,11 +2115,11 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label class="form-label" data-i18n="currentPassword" for="changeOldPassword">Current Password</label>
+            <label class="form-label" data-i18n="currentPassword" for="settingsOldPass">Current Password</label>
             <input type="password" class="form-input" id="settingsOldPass" placeholder="••••••••">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="newPassword" for="changeNewPassword">New Password</label>
+            <label class="form-label" data-i18n="newPassword" for="settingsNewPass">New Password</label>
             <input type="password" class="form-input" id="settingsNewPass" placeholder="••••••••">
           </div>
           <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2137,15 +2137,15 @@ tr:hover td { background: var(--bg-input); }
         <div id="settingsUsersForm" style="margin-bottom:16px;">
           <div class="form-row-4">
             <div class="form-group">
-              <label class="form-label" data-i18n="username" for="adminNewUsername">Username</label>
+              <label class="form-label" data-i18n="username" for="newUserUsername">Username</label>
               <input type="text" class="form-input" id="newUserUsername" placeholder="johndoe">
             </div>
             <div class="form-group">
-              <label class="form-label" data-i18n="password" for="adminNewPassword">Password</label>
+              <label class="form-label" data-i18n="password" for="newUserPassword">Password</label>
               <input type="password" class="form-input" id="newUserPassword" placeholder="••••••••">
             </div>
             <div class="form-group">
-              <label class="form-label" data-i18n="role" for="adminNewRole">Role</label>
+              <label class="form-label" data-i18n="role" for="newUserRole">Role</label>
               <select class="form-select" id="newUserRole">
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -2171,7 +2171,7 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label class="form-label" data-i18n="defaultLanguage" for="settingsLang">Default Language</label>
+            <label class="form-label" data-i18n="defaultLanguage" for="settingsLanguage">Default Language</label>
             <select class="form-select" id="settingsLanguage" onchange="updateSetting('language', this.value)">
               <option value="en">English</option>
               <option value="fa">فارسی (Persian)</option>
