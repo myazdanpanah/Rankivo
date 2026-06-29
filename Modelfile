@@ -2,6 +2,8 @@
 # Usage: ollama create rankivo-persian-intent -f Modelfile
 
 FROM qwen3.5
+# Small context window for fast classification
+# The model is 6.6GB but classification is lightweight
 
 # Persian search intent classification system prompt
 SYSTEM """

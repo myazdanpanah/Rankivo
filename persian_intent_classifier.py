@@ -9,7 +9,7 @@ import re
 import json
 import time
 import requests
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL, _safe_print
+from config import OLLAMA_BASE_URL, _safe_print
 
 
 # ──────────────────────────────────────────────
@@ -328,7 +328,7 @@ def classify_persian_intent_llm(keyword: str, model: str = "") -> dict:
         return heuristic_result
     
     try:
-        model_name = model or OLLAMA_MODEL
+        model_name = model or "rankivo-persian-intent"
         payload = {
             "model": model_name,
             "prompt": f"کلمه کلیدی فارسی زیر را طبقه‌بندی کنید:\n\n\"{keyword}\"\n\nفقط نام دسته‌بندی را برگردانید.",

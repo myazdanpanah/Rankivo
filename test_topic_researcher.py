@@ -135,7 +135,7 @@ class TestResearchCache(unittest.TestCase):
         for i in range(51):
             _cache_research(f"topic {i}", {"topic": f"topic {i}"})
         # Cache should not exceed max size (50)
-        self.assertLessEqual(len(get_cached_research.__module__ and {} or {}), 100)
+        from topic_researcher import _research_cache; self.assertLessEqual(len(_research_cache), 100)
 
     def test_clear_cache(self):
         _cache_research("test", {"topic": "test"})
