@@ -383,6 +383,7 @@ def run_content_gap_analysis(
     competitor_urls: list[str] = None,
     num_serp_results: int = 5,
     max_competitors: int = 5,
+    language: str = "en",
 ) -> dict:
     """
     Full content gap analysis pipeline.

@@ -205,6 +205,18 @@ def build_article_prompt(
             "Use Persian (RTL) text throughout. All headings, body text, and metadata must be in Persian.\n"
             "Use proper Persian SEO conventions and naturally incorporate Persian keywords.\n"
             "Write in a style appropriate for Persian-speaking audiences.\n"
+            "\n"
+            "CRITICAL PERSIAN RULES:\n"
+            "- ALL H1, H2, H3 headings: Persian\n"
+            "- Title tag / SEO Title: Persian\n"
+            "- Meta description: Persian (max 160 chars in Persian)\n"
+            "- URL slug: use transliterated Persian or English (URLs cannot be in Persian script)\n"
+            "- FAQ questions and answers: Persian\n"
+            "- Schema markup: Persian values for name, description, headline\n"
+            "- Image alt text: Persian\n"
+            "- Internal link suggestions: Persian anchor text\n"
+            "- Table headers and content: Persian\n"
+            "- Bullet points, lists, bold text: Persian\n"
         )
     else:
         lang_instruction = f"Write in {language} language."
@@ -287,7 +299,10 @@ def generate_article(
         system_prompt = (
             "شما یک نویسنده محتوای سئوی حرفه‌ای هستید. شما محتوای ساختاریافته، "
             "اصیل و بهینه‌شده برای موتورهای جستجو تولید می‌کنید. "
-            "همیشه به زبان فارسی و در قالب مارک‌داون می‌نویسید."
+            "همیشه به زبان فارسی و در قالب مارک‌داون می‌نویسید. "
+            "تمامی عناوین (H1, H2, H3)، متا توضیحات، متا عنوان، بخش FAQ، "
+            "متن محتوا، متن جایگزین تصاویر، و schema markup باید به زبان فارسی باشند. "
+            "فقط URL slug باید به انگلیسی (حروف لاتین) باشد."
         )
     else:
         system_prompt = (

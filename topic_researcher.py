@@ -176,24 +176,42 @@ def extract_key_facts(text: str) -> list[str]:
 # 4. Content Gap Identification
 # ──────────────────────────────────────────────
 
-def identify_content_gaps(topic: str, competitor_headings: list[str], user_keywords: list[str] = None) -> list[str]:
+def identify_content_gaps(topic: str, competitor_headings: list[str], user_keywords: list[str] = None, language: str = "en") -> list[str]:
     """Identify angles and subtopics competitors cover that could be expanded upon."""
     gaps = []
-    subtopic_hints = {
-        "guide": ["getting started", "step by step", "how to", "tutorial", "beginner"],
-        "comparison": ["vs", "comparison", "alternative", "difference between"],
-        "deep_dive": ["explained", "definition", "meaning", "what is", "overview"],
-        "practical": ["example", "case study", "use case", "best practice", "tip"],
-        "advanced": ["advanced", "pro tips", "expert", "strategy", "optimization"],
-        "problems": ["problem", "issue", "challenge", "mistake", "pitfall", "avoid"],
-        "future": ["future", "trend", "prediction", "2025", "2026", "upcoming"],
-        "resources": ["tool", "software", "platform", "resource", "template", "checklist"],
-    }
-    all_headings_lower = " ".join(competitor_headings).lower()
-    for category, hints in subtopic_hints.items():
-        covered = any(hint in all_headings_lower for hint in hints)
-        if not covered:
-            gaps.append(f"Missing subtopic: {category} angle (competitors don't cover this well)")
+
+    if language == "fa":
+        subtopic_hints = {
+            "guide": ["شروع", "قدم به قدم", "نحوه", "آموزش", "مبتدی"],
+            "comparison": ["مقایسه", "تفاوت", "جایگزین", "در مقابل"],
+            "deep_dive": ["تعریف", "معنی", "چیست", "مرور"],
+            "practical": ["مثال", "نمونه", "بهترین روش", "نکته", "کاربرد"],
+            "advanced": ["پیشرفته", "حرفه‌ای", "استراتژی", "بهینه‌سازی"],
+            "problems": ["مشکل", "خطا", "چالش", "اشتباه", "پرهیز"],
+            "future": ["آینده", "ترند", "پیش‌بینی", "۱۴۰۵", "۱۴۰۶"],
+            "resources": ["ابزار", "نرم‌افزار", "پلتفرم", "قالب", "چک‌لیست"],
+        }
+        all_headings_lower = " ".join(competitor_headings).lower()
+        for category, hints in subtopic_hints.items():
+            covered = any(hint in all_headings_lower for hint in hints)
+            if not covered:
+                gaps.append(f"زیرموضوع گمشده: {category} (رقیبان این بخش را پوشش نداده‌اند)")
+    else:
+        subtopic_hints = {
+            "guide": ["getting started", "step by step", "how to", "tutorial", "beginner"],
+            "comparison": ["vs", "comparison", "alternative", "difference between"],
+            "deep_dive": ["explained", "definition", "meaning", "what is", "overview"],
+            "practical": ["example", "case study", "use case", "best practice", "tip"],
+            "advanced": ["advanced", "pro tips", "expert", "strategy", "optimization"],
+            "problems": ["problem", "issue", "challenge", "mistake", "pitfall", "avoid"],
+            "future": ["future", "trend", "prediction", "2025", "2026", "upcoming"],
+            "resources": ["tool", "software", "platform", "resource", "template", "checklist"],
+        }
+        all_headings_lower = " ".join(competitor_headings).lower()
+        for category, hints in subtopic_hints.items():
+            covered = any(hint in all_headings_lower for hint in hints)
+            if not covered:
+                gaps.append(f"Missing subtopic: {category} angle (competitors don't cover this well)")
     return gaps[:8]
 
 
@@ -307,7 +325,7 @@ def research_topic(
 
     # Step 4: Identify content gaps
     research["content_gaps"] = identify_content_gaps(
-        topic, unique_headings, target_keywords
+        topic, unique_headings, target_keywords, language=language
     )
 
     # Step 5: Recommend article structure
@@ -337,12 +355,20 @@ def research_topic(
     num_facts = len(research["key_facts"])
     num_gaps = len(research["content_gaps"])
 
-    research["research_summary"] = (
-        f"Researched {num_competitors} top-ranking pages for '{topic}'. "
-        f"Found {num_facts} key facts/statistics, {len(unique_headings)} unique headings, "
-        f"and {num_gaps} content gaps to exploit. "
-        f"Competitor average word count: {avg_word_count}."
-    )
+    if language == "fa":
+        research["research_summary"] = (
+            f"تحقیق روی {num_competitors} صفحه برتر برای '{topic}' انجام شد. "
+            f"{num_facts} واقعیت/آمار کلیدی، {len(unique_headings)} تیتر یکتا، "
+            f"و {num_gaps} شکاف محتوایی شناسایی شد. "
+            f"میانگین تعداد کلمات رقیبان: {avg_word_count}."
+        )
+    else:
+        research["research_summary"] = (
+            f"Researched {num_competitors} top-ranking pages for '{topic}'. "
+            f"Found {num_facts} key facts/statistics, {len(unique_headings)} unique headings, "
+            f"and {num_gaps} content gaps to exploit. "
+            f"Competitor average word count: {avg_word_count}."
+        )
 
     _safe_print(f"[topic_researcher] {research['research_summary']}")
 

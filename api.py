@@ -248,8 +248,9 @@ def api_pillar_cluster():
 
         data = request.json or {}
         threshold = data.get("threshold", 0.30)
+        language = data.get("language", "en")
 
-        result = build_pillar_cluster_map(kw_data, cluster_threshold=threshold)
+        result = build_pillar_cluster_map(kw_data, cluster_threshold=threshold, language=language)
         
         # Add Google Trends data for the seed keyword
         seed = kw_data.get("seed", "")
@@ -1196,7 +1197,8 @@ def api_pipeline_run():
         session["keyword_data"] = kw_data
         
         # Step 2: Build Pillar-Cluster Map
-        cluster_result = build_pillar_cluster_map(kw_data, cluster_threshold=data.get("threshold", 0.30))
+        language = data.get("language", "en")
+        cluster_result = build_pillar_cluster_map(kw_data, cluster_threshold=data.get("threshold", 0.30), language=language)
         session["cluster_map"] = cluster_result
         
         # Step 2.5: Content Gap Analysis (optional, best-effort)
@@ -1215,6 +1217,7 @@ def api_pipeline_run():
                     my_keywords=my_kw_list,
                     num_serp_results=3,
                     max_competitors=3,
+                    language=language,
                 )
                 if gap_result.get("gap_analysis", {}).get("gap_keywords"):
                     gap_analysis = {
@@ -1225,14 +1228,21 @@ def api_pipeline_run():
                     }
                     # Add gap keywords to content plan as suggested articles
                     for gap_kw in gap_result["gap_analysis"]["gap_keywords"][:5]:
+                        gap_kw_title = gap_kw['keyword'].title()
+                        if language == "fa":
+                            gap_pillar_title = f"شکاف محتوایی: {gap_kw['keyword']}"
+                            gap_article_title = f"{gap_kw['keyword']}: راهنمای جامع"
+                        else:
+                            gap_pillar_title = f"Content Gap: {gap_kw_title}"
+                            gap_article_title = f"{gap_kw_title}: A Comprehensive Guide"
                         cluster_result.setdefault("content_plan", []).append({
                             "pillar_keyword": gap_kw["keyword"],
-                            "pillar_title": f"Content Gap: {gap_kw['keyword'].title()}",
+                            "pillar_title": gap_pillar_title,
                             "pillar_intent": "informational",
                             "articles": [{
                                 "keyword": gap_kw["keyword"],
                                 "intent": "informational",
-                                "suggested_title": f"{gap_kw['keyword'].title()}: A Comprehensive Guide",
+                                "suggested_title": gap_article_title,
                             }],
                             "total_content_pieces": 1,
                             "source": "content_gap",
@@ -1577,6 +1587,8 @@ def api_content_gap_analyze():
         if not seed:
             return jsonify({"error": "Seed keyword is required"}), 400
 
+        language = data.get("language", "en")
+
         # If no my_keywords provided, try to get from session
         if not my_keywords:
             session = _get_session()
@@ -1593,6 +1605,7 @@ def api_content_gap_analyze():
             competitor_urls=competitor_urls,
             num_serp_results=num_serp,
             max_competitors=max_competitors,
+            language=language,
         )
         return jsonify(result)
     except Exception as e:
@@ -1661,41 +1674,41 @@ def api_content_gap_extract():
         return jsonify({"error": str(e)}), 500
 
 
-
-
-# ──────────────────────────────────────────────
-# 20. Persian Intent Classification
-# ──────────────────────────────────────────────
-
-@require_auth
-@app.route("/api/persian-intent/classify", methods=["POST"])
-def api_persian_intent_classify():
-    """Classify Persian search intent for one or more keywords."""
-    try:
-        data = request.json or {}
-        keywords = data.get("keywords", [])
-        keyword = data.get("keyword", "")
-
-        if keyword and not keywords:
-            keywords = [keyword]
-        if not keywords:
-            return jsonify({"error": "At least one keyword is required"}), 400
-
-        if len(keywords) == 1:
-            result = classify_persian_intent_heuristic(keywords[0])
-            return jsonify({"keyword": keywords[0], "result": result})
-        else:
-            results = classify_persian_intents_batch(keywords)
-            return jsonify({"results": results, "count": len(results)})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@require_auth
-@app.route("/api/persian-intent/status")
-def api_persian_intent_status():
-    """Check Persian intent classifier capabilities."""
-    return jsonify(get_persian_classifier_status())
+
+
+# ──────────────────────────────────────────────
+# 20. Persian Intent Classification
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/persian-intent/classify", methods=["POST"])
+def api_persian_intent_classify():
+    """Classify Persian search intent for one or more keywords."""
+    try:
+        data = request.json or {}
+        keywords = data.get("keywords", [])
+        keyword = data.get("keyword", "")
+
+        if keyword and not keywords:
+            keywords = [keyword]
+        if not keywords:
+            return jsonify({"error": "At least one keyword is required"}), 400
+
+        if len(keywords) == 1:
+            result = classify_persian_intent_heuristic(keywords[0])
+            return jsonify({"keyword": keywords[0], "result": result})
+        else:
+            results = classify_persian_intents_batch(keywords)
+            return jsonify({"results": results, "count": len(results)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/persian-intent/status")
+def api_persian_intent_status():
+    """Check Persian intent classifier capabilities."""
+    return jsonify(get_persian_classifier_status())
 
 
 if __name__ == "__main__":

@@ -90,6 +90,7 @@ def group_keywords_into_clusters(keywords: list[str], threshold: float = 0.35) -
 def identify_pillar_clusters(
     clusters: list[dict],
     intent_map: dict[str, str] | None = None,
+    language: str = "en",
 ) -> list[dict]:
     """
     For each cluster, determine the best pillar keyword.
@@ -123,14 +124,16 @@ def identify_pillar_clusters(
             "cluster_keywords": cluster_keywords,
             "all_keywords": keywords,
             "size": len(keywords),
-            "pillar_title_suggestion": _generate_pillar_title(pillar_keyword),
+            "pillar_title_suggestion": _generate_pillar_title(pillar_keyword, language=language),
         })
 
     return pillar_clusters
 
 
-def _generate_pillar_title(keyword: str) -> str:
+def _generate_pillar_title(keyword: str, language: str = "en") -> str:
     """Generate a suggested pillar page title from the keyword."""
+    if language == "fa":
+        return _generate_pillar_title_fa(keyword)
     words = keyword.split()
     title = " ".join(w.capitalize() if w[0].islower() else w for w in words)
     # Add common pillar suffixes if the keyword doesn't already imply one
@@ -140,12 +143,17 @@ def _generate_pillar_title(keyword: str) -> str:
     return title
 
 
+def _generate_pillar_title_fa(keyword: str) -> str:
+    """Generate a Persian pillar page title from the keyword."""
+    return f"راهنمای جامع {keyword}"
+
+
 # ──────────────────────────────────────────────
 # 3. Content Brief Generation
 # ──────────────────────────────────────────────
 
 
-def generate_cluster_content_plan(pillar_clusters: list[dict], intent_map: dict | None = None) -> list[dict]:
+def generate_cluster_content_plan(pillar_clusters: list[dict], intent_map: dict | None = None, language: str = "en") -> list[dict]:
     """
     For each pillar cluster, generate a content plan with suggested article
     titles for the cluster articles.
@@ -157,7 +165,7 @@ def generate_cluster_content_plan(pillar_clusters: list[dict], intent_map: dict 
 
         for kw in pc["cluster_keywords"]:
             intent = (intent_map or {}).get(kw, "informational")
-            title = _generate_cluster_title(kw, intent)
+            title = _generate_cluster_title(kw, intent, language=language)
             articles.append({
                 "keyword": kw,
                 "intent": intent,
@@ -176,8 +184,10 @@ def generate_cluster_content_plan(pillar_clusters: list[dict], intent_map: dict 
     return plans
 
 
-def _generate_cluster_title(keyword: str, intent: str) -> str:
+def _generate_cluster_title(keyword: str, intent: str, language: str = "en") -> str:
     """Generate a cluster article title based on keyword and intent."""
+    if language == "fa":
+        return _generate_cluster_title_fa(keyword, intent)
     kw = keyword.strip().capitalize()
 
     current_year = datetime.now().year
@@ -207,6 +217,33 @@ def _generate_cluster_title(keyword: str, intent: str) -> str:
     return options[0]
 
 
+def _generate_cluster_title_fa(keyword: str, intent: str) -> str:
+    """Generate a Persian cluster article title based on keyword and intent."""
+    templates = {
+        "informational": [
+            f"{keyword} چیست؟ توضیح کامل",
+            f"همه چیز درباره {keyword}",
+            f"آشنایی کامل با {keyword}",
+        ],
+        "commercial": [
+            f"بهترین {keyword} در سال {datetime.now().year}",
+            f"مقایسه {keyword}ها — کدام بهتر است؟",
+            f"{keyword}: کدام گزینه مناسب شماست؟",
+        ],
+        "transactional": [
+            f"خرید {keyword} — راهنمای قیمت و خرید",
+            f"راهنمای قیمت {keyword}",
+            f"چگونه بهترین قیمت {keyword} را پیدا کنیم؟",
+        ],
+        "navigational": [
+            f"راهنمای رسمی {keyword}",
+            f"شروع کار با {keyword}",
+        ],
+    }
+    options = templates.get(intent, templates["informational"])
+    return options[0]
+
+
 # ──────────────────────────────────────────────
 # 4. Full Pillar-Cluster Pipeline
 # ──────────────────────────────────────────────
@@ -215,6 +252,7 @@ def _generate_cluster_title(keyword: str, intent: str) -> str:
 def build_pillar_cluster_map(
     keyword_data: dict,
     cluster_threshold: float = 0.30,
+    language: str = "en",
 ) -> dict:
     """
     Full pipeline: take keyword_research output and produce a pillar-cluster map.
@@ -232,10 +270,10 @@ def build_pillar_cluster_map(
     clusters = group_keywords_into_clusters(keywords, threshold=cluster_threshold)
 
     # Step 2: Identify pillar keywords
-    pillar_clusters = identify_pillar_clusters(clusters, intent_map)
+    pillar_clusters = identify_pillar_clusters(clusters, intent_map, language=language)
 
     # Step 3: Generate content plan
-    content_plan = generate_cluster_content_plan(pillar_clusters, intent_map)
+    content_plan = generate_cluster_content_plan(pillar_clusters, intent_map, language=language)
 
     # Stats
     total_kw = len(keywords)
