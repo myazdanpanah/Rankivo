@@ -1979,11 +1979,11 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-4">
           <div class="form-group">
-            <label class="form-label" data-i18n="keywords">Keywords (comma separated)</label>
+            <label class="form-label" data-i18n="keywords" for="bingTrendsKeywords">Keywords (comma separated)</label>
             <input type="text" class="form-input" id="bingTrendsKeywords" placeholder="SEO, AI, marketing" onkeydown="if(event.key==='Enter') loadBingTrends()">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="geo">Geography</label>
+            <label class="form-label" data-i18n="geo" for="bingTrendsGeo">Geography</label>
             <select class="form-select" id="bingTrendsGeo">
               <option value="">Worldwide</option>
               <option value="US">United States</option>
@@ -2058,7 +2058,7 @@ tr:hover td { background: var(--bg-input); }
 
           <div class="form-group">
 
-            <label class="form-label" data-i18n="urlToAudit">URL to Audit</label>
+            <label class="form-label" data-i18n="urlToAudit" for="techUrl">URL to Audit</label>
 
             <input type="text" class="form-input" id="techUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') runTechnicalAudit()">
 
@@ -2291,15 +2291,16 @@ tr:hover td { background: var(--bg-input); }
     <div style="font-size:2.5rem;margin-bottom:8px;">🔍</div>
     <h2 style="margin-bottom:4px;">Rankivo</h2>
     <p style="color:var(--text-muted);margin-bottom:24px;font-size:0.9rem;" data-i18n="signInPrompt">Sign in to access SEO AI Tools</p>
+    <form onsubmit="event.preventDefault();doLogin();">
     <div class="form-group" style="text-align:left;">
       <label class="form-label" data-i18n="loginUsername" for="loginUsername">Username</label>
       <input type="text" class="form-input" id="loginUsername" placeholder="admin" autofocus>
     </div>
     <div class="form-group" style="text-align:left;">
       <label class="form-label" data-i18n="loginPassword" for="loginPassword">Password</label>
-      <input type="password" class="form-input" id="loginPassword" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" class="form-input" id="loginPassword" placeholder="password">
     </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;" onclick="doLogin()">
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;" >
       <i class="fas fa-sign-in-alt"></i> <span data-i18n="signIn">Sign In</span>
     </button>
     <div id="loginError" style="color:var(--danger);font-size:0.85rem;margin-top:12px;display:none;"></div>

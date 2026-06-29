@@ -5,6 +5,13 @@ Entry point: Run `python app.py` to start the Web UI.
 import os
 import sys
 
+# Load .env file if present (python-dotenv)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Force UTF-8 stdout/stderr to prevent CP1252 crashes with Persian/Arabic text.
 if sys.platform == 'win32':
     try:
