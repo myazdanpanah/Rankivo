@@ -319,6 +319,18 @@ def api_generate_article():
             _safe_print(f"[article] Research failed, continuing without: {re}")
             research_data = None
 
+        # Step 1.5: Fetch Iran province trends for Persian content
+        if language == "fa" and research_data:
+            try:
+                province_data = google_trends.get_iran_province_trends(
+                    keywords=keywords[:3],
+                    timeframe="today 12-m",
+                )
+                if province_data and "data" in province_data:
+                    research_data["province_trends"] = province_data["data"]
+            except Exception as pe:
+                _safe_print(f"[article] Province trends fetch error: {pe}")
+
         # Step 2: Generate the article with research context
         article = generate_article(
             topic=topic,
@@ -927,6 +939,27 @@ def api_trends_region():
             return jsonify({"error": "At least one keyword is required"}), 400
         
         result = google_trends.get_interest_by_region(keywords, timeframe=timeframe, geo=geo, resolution=resolution)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/trends/iran-provinces", methods=["POST"])
+def api_trends_iran_provinces():
+    """Get search interest by Iranian province for keywords."""
+    try:
+        data = request.json or {}
+        keywords = data.get("keywords", [])
+        timeframe = data.get("timeframe", "today 12-m")
+
+        if not keywords:
+            return jsonify({"error": "At least one keyword is required"}), 400
+
+        result = google_trends.get_iran_province_trends(
+            keywords=keywords,
+            timeframe=timeframe,
+        )
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

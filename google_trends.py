@@ -188,3 +188,161 @@ def check_availability() -> dict:
         "library_installed": PYTRENDS_AVAILABLE,
         "message": "Google Trends is ready!" if client else "Install pytrends: pip install pytrends",
     }
+
+
+# ──────────────────────────────────────────────
+# Iran Province-Level Trends
+# ──────────────────────────────────────────────
+
+# Google Trends returns English region names for Iran provinces.
+# This mapping provides English→Persian translation for display.
+IRAN_PROVINCES_EN_FA = {
+    "Tehran": "تهران",
+    "Isfahan": "اصفهان",
+    "Fars": "فارس",
+    "Khorasan Razavi": "خراسان رضوی",
+    "Khuzestan": "خوزستان",
+    "West Azerbaijan": "آذربایجان غربی",
+    "East Azerbaijan": "آذربایجان شرقی",
+    "Alborz": "البرز",
+    "Kerman": "کرمان",
+    "Mazandaran": "مازندران",
+    "Gilan": "گیلان",
+    "Lorestan": "لرستان",
+    "Kermanshah": "کرمانشاه",
+    "Sistan and Baluchestan": "سیستان و بلوچستان",
+    "Hormozgan": "هرمزگان",
+    "Kurdistan": "کردستان",
+    "Zanjan": "زنجان",
+    "Hamadan": "همدان",
+    "Markazi": "مرکزی",
+    "Golestan": "گلستان",
+    "Hamedan": "همدان",
+    "Ilam": "ایلام",
+    "Chaharmahal and Bakhtiari": "چهارمحال و بختیاری",
+    "Kohgiluyeh and Boyer-Ahmad": "کهگیلویه و بویراحمد",
+    "Khorasan South": "خراسان جنوبی",
+    "Khorasan North": "خراسان شمالی",
+    "Yazd": "یزد",
+    "Qom": "قم",
+    "Qazvin": "قزوین",
+    "Semnan": "سمنان",
+    "Bushehr": "بوشهر",
+    "Ardabil": "اردبیل",
+    "North Khorasan": "خراسان شمالی",
+    "South Khorasan": "خراسان جنوبی",
+    "Razavi Khorasan": "خراسان رضوی",
+}
+
+# Sorted list of top Iran provinces by population (for ranking display)
+IRAN_TOP_PROVINCES = [
+    "Tehran", "Isfahan", "Fars", "Khorasan Razavi", "Khuzestan",
+    "West Azerbaijan", "East Azerbaijan", "Alborz", "Kerman", "Mazandaran",
+    "Gilan", "Lorestan", "Kermanshah", "Sistan and Baluchestan", "Hormozgan",
+    "Kurdistan", "Zanjan", "Hamedan", "Markazi", "Golestan",
+]
+
+
+def get_iran_province_trends(
+    keywords: list[str],
+    timeframe: str = "today 12-m",
+) -> dict:
+    """
+    Get search interest by Iranian province for the given keywords.
+    Uses Google Trends with geo="IR" and resolution="REGION".
+
+    Returns:
+        dict with:
+          - provinces: list of {name_en, name_fa, score, rank} per keyword
+          - top_provinces: top 5 provinces by search interest
+          - recommendation: content targeting suggestion
+          - search_volume_ranking: overall keyword ranking (0-100 scale)
+    """
+    client = _get_client()
+    if not client:
+        return {"error": "pytrends library not available"}
+
+    if not keywords:
+        return {"error": "At least one keyword is required"}
+
+    kw_list = keywords[:5]
+    results = {}
+
+    for kw in kw_list:
+        try:
+            client.build_payload([kw], cat=0, timeframe=timeframe, geo="IR", gprop="")
+            data = client.interest_by_region(
+                resolution="REGION", inc_low_vol=True, inc_geo_code=True
+            )
+
+            if data is None or data.empty:
+                results[kw] = {
+                    "provinces": [],
+                    "top_provinces": [],
+                    "recommendation": f"داده‌ای برای '{kw}' در استان‌های ایران یافت نشد.",
+                    "search_volume_ranking": 0,
+                }
+                continue
+
+            # Extract and sort province data
+            province_list = []
+            for region_name, row_data in data.iterrows():
+                score = int(row_data.iloc[0]) if hasattr(row_data, 'iloc') else int(row_data)
+                if score > 0:
+                    name_fa = IRAN_PROVINCES_EN_FA.get(region_name, region_name)
+                    province_list.append({
+                        "name_en": region_name.strip(),
+                        "name_fa": name_fa,
+                        "score": score,
+                    })
+
+            # Sort by score descending and assign ranks
+            province_list.sort(key=lambda x: x["score"], reverse=True)
+            for i, p in enumerate(province_list):
+                p["rank"] = i + 1
+
+            # Overall search volume ranking (0-100 scale)
+            max_score = province_list[0]["score"] if province_list else 0
+            search_volume_ranking = max_score  # Google Trends already gives 0-100
+
+            # Top 5 provinces
+            top_5 = province_list[:5]
+            top_5_fa = [f"{p['name_fa']} ({p['score']})" for p in top_5]
+
+            # Generate targeting recommendation in Persian
+            if len(top_5) >= 3:
+                top_names = "، ".join(p["name_fa"] for p in top_5[:3])
+                recommendation = (
+                    f"بیشترین جستجو برای '{kw}' در استان‌های {top_names} است. "
+                    f"محتوای خود را برای مخاطبان این استان‌ها بهینه کنید. "
+                    f"از کلمات کلیدی محلی و اصطلاحات منطقه‌ای استفاده کنید."
+                )
+            elif top_5:
+                recommendation = (
+                    f"استان {top_5[0]['name_fa']} بیشترین جستجو برای '{kw}' را دارد. "
+                    f"محتوای هدفمند برای این منطقه تولید کنید."
+                )
+            else:
+                recommendation = f"داده کافی برای توصیه هدف‌گیری استانی '{kw}' موجود نیست."
+
+            results[kw] = {
+                "provinces": province_list,
+                "top_provinces": top_5,
+                "recommendation": recommendation,
+                "search_volume_ranking": search_volume_ranking,
+            }
+
+        except Exception as e:
+            _safe_print(f"[google_trends] Iran province error for '{kw}': {e}")
+            results[kw] = {
+                "provinces": [],
+                "top_provinces": [],
+                "recommendation": f"خطا در دریافت داده استانی برای '{kw}'.",
+                "search_volume_ranking": 0,
+                "error": str(e),
+            }
+
+        # Rate limit between keywords
+        time.sleep(1.0)
+
+    return {"keywords": kw_list, "data": results}

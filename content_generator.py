@@ -162,6 +162,17 @@ def build_article_prompt(
             if rec.get("has_tables_in_competitors"):
                 research_section += "- Top competitors use tables/comparisons\n"
 
+        # Iran province trends (for Persian content)
+        province_trends = research_data.get("province_trends", {})
+        if province_trends and language == "fa":
+            research_section += "\n## Iran Province Search Trends:\n"
+            for kw, pdata in province_trends.items():
+                if pdata.get("top_provinces"):
+                    top_fa = [f"{p.get('name_fa', '')} ({p.get('score', 0)})" for p in pdata["top_provinces"][:5]]
+                    research_section += f"  - {kw}: {', '.join(top_fa)}\n"
+                if pdata.get("recommendation"):
+                    research_section += f"  Recommendation: {pdata['recommendation']}\n"
+
         # Competitor headings for structure inspiration
         top_headings = research_data.get("top_headings", [])
         if top_headings:
