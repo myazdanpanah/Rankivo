@@ -1,7 +1,5 @@
-"""
-Rankivo — SEO AI Tools
-Multi-stage Docker build for production.
-"""
+# Rankivo — SEO AI Tools
+# Multi-stage Docker build for production.
 
 # ── Stage 1: Build dependencies ──────────────────────
 FROM python:3.12-slim AS builder
@@ -53,4 +51,4 @@ EXPOSE 5500
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5500/health || exit 1
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5500", "app:app"]

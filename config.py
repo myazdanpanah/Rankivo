@@ -97,7 +97,7 @@ SEMANTIC_CLUSTERING = os.getenv("SEMANTIC_CLUSTERING", "1") == "1"
 # --- Auth Settings ---
 # Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to enable login protection.
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "rankivo")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin12345")
 SECRET_KEY = os.getenv("SECRET_KEY", "rankivo-change-me-in-production")
 
 

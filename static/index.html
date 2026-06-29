@@ -1387,11 +1387,11 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" data-i18n="seedKeyword">Seed Keyword</label>
+            <label class="form-label" data-i18n="seedKeyword" for="seedKeyword">Seed Keyword</label>
             <input type="text" class="form-input" id="kwSeed" placeholder="e.g. python web development" onkeydown="if(event.key==='Enter') runKeywordResearch()">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="depth">Depth</label>
+            <label class="form-label" data-i18n="depth" for="kwDepth">Depth</label>
             <input type="range" id="kwDepth" min="1" max="3" value="1" style="width:100%;margin-top:8px;" oninput="document.getElementById('kwDepthVal').textContent=this.value">
             <span style="font-size:0.85rem;color:var(--text-muted);"><span data-i18n="level">Level</span>: <span id="kwDepthVal">1</span></span>
           </div>
@@ -1498,7 +1498,7 @@ tr:hover td { background: var(--bg-input); }
         <div id="clusterForm" style="display:none;">
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" data-i18n="similarityThreshold">Similarity Threshold</label>
+              <label class="form-label" data-i18n="similarityThreshold" for="clusterThreshold">Similarity Threshold</label>
               <input type="range" id="clusterThreshold" min="0.15" max="0.60" step="0.05" value="0.30" style="width:100%;" oninput="document.getElementById('clusterThreshVal').textContent=this.value">
               <span style="font-size:0.85rem;color:var(--text-muted);"><span data-i18n="threshold">Threshold</span>: <span id="clusterThreshVal">0.30</span></span>
             </div>
@@ -1553,13 +1553,13 @@ tr:hover td { background: var(--bg-input); }
       <div class="card" style="margin-bottom:20px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
-            <label class="form-label" data-i18n="contentGapSeedLabel">Target Keyword</label>
+            <label class="form-label" data-i18n="contentGapSeedLabel" for="gapSeedKeyword">Target Keyword</label>
             <input class="form-input" id="gapSeed" placeholder="e.g. seo tools" style="margin-bottom:12px;">
-            <label class="form-label" data-i18n="contentGapCompetitorsLabel">Competitor URLs (one per line, optional)</label>
+            <label class="form-label" data-i18n="contentGapCompetitorsLabel" for="gapCompetitors">Competitor URLs (one per line, optional)</label>
             <textarea class="form-input" id="gapCompetitors" rows="4" placeholder="https://competitor1.com&#10;https://competitor2.com" style="margin-bottom:12px;font-family:monospace;font-size:0.85rem;"></textarea>
           </div>
           <div>
-            <label class="form-label" data-i18n="contentGapMyKeywordsLabel">Your Keywords (one per line, optional)</label>
+            <label class="form-label" data-i18n="contentGapMyKeywordsLabel" for="gapMyKeywords">Your Keywords (one per line, optional)</label>
             <textarea class="form-input" id="gapMyKeywords" rows="4" placeholder="Leave empty to use keyword research data" style="margin-bottom:12px;font-family:monospace;font-size:0.85rem;"></textarea>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-primary" id="btnGapAnalyze" onclick="analyzeContentGap()"><i class="fas fa-crosshairs"></i> <span data-i18n="contentGapAnalyzeBtn">Analyze Content Gaps</span></button>
@@ -1598,32 +1598,32 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" data-i18n="topic">Topic</label>
+            <label class="form-label" data-i18n="topic" for="articleTopic">Topic</label>
             <input type="text" class="form-input" id="articleTopic" placeholder="How to use Python for SEO">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="targetKeywords">Target Keywords (one per line)</label>
+            <label class="form-label" data-i18n="targetKeywords" for="articleKeywords">Target Keywords (one per line)</label>
             <textarea class="form-textarea" id="articleKeywords" rows="3" placeholder="python seo&#10;seo tools&#10;keyword research"></textarea>
           </div>
         </div>
         <div class="form-row-4">
           <div class="form-group">
-            <label class="form-label" data-i18n="aiProvider">AI Provider</label>
+            <label class="form-label" data-i18n="aiProvider" for="articleProvider">AI Provider</label>
             <select class="form-select" id="articleProvider"></select>
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="articleLanguage">Article Language</label>
+            <label class="form-label" data-i18n="articleLanguage" for="articleLanguage">Article Language</label>
             <select class="form-select" id="articleLanguage">
               <option value="en">English</option>
               <option value="fa">فارسی (Persian)</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="wordCount">Word Count</label>
+            <label class="form-label" data-i18n="wordCount" for="articleWordCount">Word Count</label>
             <input type="number" class="form-input" id="articleWordCount" value="1500" min="500" max="5000" step="100">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="tone">Tone</label>
+            <label class="form-label" data-i18n="tone" for="articleTone">Tone</label>
             <select class="form-select" id="articleTone">
               <option>informative, authoritative</option>
               <option>casual, friendly</option>
@@ -1634,7 +1634,7 @@ tr:hover td { background: var(--bg-input); }
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" data-i18n="style">Style</label>
+          <label class="form-label" data-i18n="style" for="articleStyle">Style</label>
           <select class="form-select" id="articleStyle">
             <option>blog post</option>
             <option>guide</option>
@@ -1681,15 +1681,15 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label class="form-label" data-i18n="urlToAudit">URL to Audit</label>
+            <label class="form-label" data-i18n="urlToAudit" for="auditUrl">URL to Audit</label>
             <input type="text" class="form-input" id="auditUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') runAudit()">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="focusKeyword">Focus Keyword (optional)</label>
+            <label class="form-label" data-i18n="focusKeyword" for="auditKeyword">Focus Keyword (optional)</label>
             <input type="text" class="form-input" id="auditKeyword" placeholder="target keyword">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="pageType">Page Type</label>
+            <label class="form-label" data-i18n="pageType" for="auditPageType">Page Type</label>
             <select class="form-select" id="auditPageType">
               <option value="auto" data-i18n="autoDetect">🔍 Auto-detect from URL</option>
               <option value="generic" data-i18n="genericPage">📄 General Page</option>
@@ -1724,7 +1724,7 @@ tr:hover td { background: var(--bg-input); }
           </button>
         </div>
         <div class="form-group">
-          <label class="form-label" data-i18n="uploadCsv">Upload CSV (columns: url, keyword, page_type)</label>
+          <label class="form-label" data-i18n="uploadCsv" for="batchCsv">Upload CSV (columns: url, keyword, page_type)</label>
           <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;" data-i18n="optionalColumns">Optional columns: keyword, page_type (homepage/product/blog/generic/auto)</div>
           <input type="file" class="form-input" id="batchFile" accept=".csv" onchange="handleBatchFile(event)">
         </div>
@@ -1845,11 +1845,11 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-4">
           <div class="form-group">
-            <label class="form-label" data-i18n="keywords">Keywords (comma separated)</label>
+            <label class="form-label" data-i18n="keywords" for="trendsKeywords">Keywords (comma separated)</label>
             <input type="text" class="form-input" id="trendsKeywords" placeholder="SEO, AI, marketing" onkeydown="if(event.key==='Enter') loadTrends()">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="timeframe">Timeframe</label>
+            <label class="form-label" data-i18n="timeframe" for="trendsTimeframe">Timeframe</label>
             <select class="form-select" id="trendsTimeframe">
               <option value="today 1-m">Past Month</option>
               <option value="today 3-m">Past 3 Months</option>
@@ -1859,7 +1859,7 @@ tr:hover td { background: var(--bg-input); }
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="geo">Geography</label>
+            <label class="form-label" data-i18n="geo" for="trendsGeo">Geography</label>
             <select class="form-select" id="trendsGeo">
               <option value="">Worldwide</option>
               <option value="US">United States</option>
@@ -1929,7 +1929,7 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-4">
           <div class="form-group">
-            <label class="form-label" data-i18n="urlToCheck">URL to Check</label>
+            <label class="form-label" data-i18n="urlToCheck" for="bingUrl">URL to Check</label>
             <input type="text" class="form-input" id="bingUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') runBingAnalysis()">
           </div>
           <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2115,11 +2115,11 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label class="form-label" data-i18n="currentPassword">Current Password</label>
+            <label class="form-label" data-i18n="currentPassword" for="changeOldPassword">Current Password</label>
             <input type="password" class="form-input" id="settingsOldPass" placeholder="••••••••">
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="newPassword">New Password</label>
+            <label class="form-label" data-i18n="newPassword" for="changeNewPassword">New Password</label>
             <input type="password" class="form-input" id="settingsNewPass" placeholder="••••••••">
           </div>
           <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2137,15 +2137,15 @@ tr:hover td { background: var(--bg-input); }
         <div id="settingsUsersForm" style="margin-bottom:16px;">
           <div class="form-row-4">
             <div class="form-group">
-              <label class="form-label" data-i18n="username">Username</label>
+              <label class="form-label" data-i18n="username" for="adminNewUsername">Username</label>
               <input type="text" class="form-input" id="newUserUsername" placeholder="johndoe">
             </div>
             <div class="form-group">
-              <label class="form-label" data-i18n="password">Password</label>
+              <label class="form-label" data-i18n="password" for="adminNewPassword">Password</label>
               <input type="password" class="form-input" id="newUserPassword" placeholder="••••••••">
             </div>
             <div class="form-group">
-              <label class="form-label" data-i18n="role">Role</label>
+              <label class="form-label" data-i18n="role" for="adminNewRole">Role</label>
               <select class="form-select" id="newUserRole">
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -2171,19 +2171,19 @@ tr:hover td { background: var(--bg-input); }
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label class="form-label" data-i18n="defaultLanguage">Default Language</label>
+            <label class="form-label" data-i18n="defaultLanguage" for="settingsLang">Default Language</label>
             <select class="form-select" id="settingsLanguage" onchange="updateSetting('language', this.value)">
               <option value="en">English</option>
               <option value="fa">فارسی (Persian)</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="defaultAiProvider">Default AI Provider</label>
+            <label class="form-label" data-i18n="defaultAiProvider" for="settingsAiProvider">Default AI Provider</label>
             <select class="form-select" id="settingsAiProvider" onchange="updateSetting('ai_provider', this.value)">
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="theme">Theme</label>
+            <label class="form-label" data-i18n="theme" for="settingsTheme">Theme</label>
             <select class="form-select" id="settingsTheme" onchange="toggleTheme()">
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -2292,11 +2292,11 @@ tr:hover td { background: var(--bg-input); }
     <h2 style="margin-bottom:4px;">Rankivo</h2>
     <p style="color:var(--text-muted);margin-bottom:24px;font-size:0.9rem;" data-i18n="signInPrompt">Sign in to access SEO AI Tools</p>
     <div class="form-group" style="text-align:left;">
-      <label class="form-label" data-i18n="loginUsername">Username</label>
+      <label class="form-label" data-i18n="loginUsername" for="loginUsername">Username</label>
       <input type="text" class="form-input" id="loginUsername" placeholder="admin" autofocus>
     </div>
     <div class="form-group" style="text-align:left;">
-      <label class="form-label" data-i18n="loginPassword">Password</label>
+      <label class="form-label" data-i18n="loginPassword" for="loginPassword">Password</label>
       <input type="password" class="form-input" id="loginPassword" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;" onclick="doLogin()">
