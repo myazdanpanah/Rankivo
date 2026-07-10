@@ -12,7 +12,6 @@ How it works:
 Unlike claude-seo which uses Claude Code's native agent spawning,
 this uses Python's built-in threading for parallel execution.
 """
-import os
 import importlib
 import time
 import traceback
