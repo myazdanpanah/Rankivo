@@ -9,7 +9,6 @@ import json
 import time
 import random
 import re
-from collections import Counter
 from config import (
     REQUEST_TIMEOUT,
     USER_AGENTS,

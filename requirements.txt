@@ -21,3 +21,4 @@ gunicorn>=22.0.0
 python-dotenv>=1.0.0
 parsivar>=0.2.1
 duckduckgo-search
+playwright>=1.40.0

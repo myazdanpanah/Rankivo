@@ -40,6 +40,23 @@ import llm_keyword_intelligence as llm_intel
 from users import verify_user, create_user, delete_user, change_password, get_all_users, get_setting, set_setting, get_all_settings
 import content_gap
 from persian_intent_classifier import classify_persian_intent_heuristic, classify_persian_intents_batch, get_persian_classifier_status
+import eeat
+import schema_audit
+import geo_audit
+import backlinks
+import seo_drift
+import seo_images
+import sitemap_audit
+import hreflang_audit
+import local_seo
+import ecommerce_seo
+import sxo_audit
+import content_brief
+import programmatic_seo
+import seo_plan
+import pdf_report
+import parallel_orchestrator
+import site_performance
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = SECRET_KEY
@@ -1742,6 +1759,628 @@ def api_persian_intent_classify():
 def api_persian_intent_status():
     """Check Persian intent classifier capabilities."""
     return jsonify(get_persian_classifier_status())
+
+
+# ──────────────────────────────────────────────
+# 21. E-E-A-T Analysis
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/eeat/analyze", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_eeat_analyze():
+    """Run full E-E-A-T analysis on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = eeat.analyze_eear_t(url)
+        session = _get_session()
+        session["eeat_result"] = result
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 22. Schema.org Deep Audit
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/schema/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_schema_audit():
+    """Run deep Schema.org audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = schema_audit.audit_schema(url)
+        session = _get_session()
+        session["schema_result"] = result
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 23. GEO / AEO Audit
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/geo/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_geo_audit():
+    """Run GEO/AEO audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = geo_audit.audit_geo(url)
+        session = _get_session()
+        session["geo_result"] = result
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 24. Backlink Analysis
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/backlinks/analyze", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_backlinks_analyze():
+    """Analyze backlinks for a domain."""
+    try:
+        data = request.json or {}
+        domain = data.get("domain", "").strip()
+        if not domain:
+            return jsonify({"error": "Domain is required"}), 400
+        result = backlinks.analyze_backlinks(domain)
+        session = _get_session()
+        session["backlinks_result"] = result
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 25. SEO Drift Monitoring
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/drift/snapshot", methods=["POST"])
+def api_drift_snapshot():
+    """Save an SEO audit snapshot for drift monitoring."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        audit_data = data.get("audit_data")
+        if not url or not audit_data:
+            return jsonify({"error": "URL and audit_data are required"}), 400
+        result = seo_drift.save_snapshot(url, audit_data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/drift/compare", methods=["POST"])
+def api_drift_compare():
+    """Compare two audit snapshots for a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = seo_drift.compare_snapshots(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/drift/history", methods=["POST"])
+def api_drift_history():
+    """Get snapshot history for a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        limit = data.get("limit", 20)
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = seo_drift.get_snapshot_history(url, limit=limit)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ──────────────────────────────────────────────
+# 26. SPA Rendering (Playwright)
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/spa/render", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_spa_render():
+    """Render a URL with Playwright for JavaScript-heavy pages."""
+    try:
+        import spa_renderer
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        wait_time = data.get("wait_time", 3)
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = spa_renderer.render_url(url, wait_time=wait_time)
+        return jsonify(result)
+    except ImportError:
+        return jsonify({"error": "Playwright not installed. Run: pip install playwright && playwright install chromium"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@require_auth
+@app.route("/api/spa/status")
+def api_spa_status():
+    """Check if Playwright is available."""
+    try:
+        import spa_renderer
+        return jsonify(spa_renderer.check_playwright_status())
+    except ImportError:
+        return jsonify({"available": False, "reason": "Playwright not installed"})
+
+
+# ──────────────────────────────────────────────
+# 27. Image Optimization
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/images/analyze", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_images_analyze():
+    """Run image optimization analysis on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = seo_images.analyze_images(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 28. Sitemap Audit
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/sitemap/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_sitemap_audit():
+    """Run full sitemap audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = sitemap_audit.audit_sitemap(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 29. Hreflang / International SEO
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/hreflang/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_hreflang_audit():
+    """Run hreflang audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = hreflang_audit.audit_hreflang(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 30. Local SEO
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/local-seo/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_local_seo_audit():
+    """Run local SEO audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = local_seo.audit_local_seo(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 31. E-commerce SEO
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/ecommerce/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_ecommerce_audit():
+    """Run e-commerce SEO audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = ecommerce_seo.audit_ecommerce(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 32. Search Experience Optimization (SXO)
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/sxo/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_sxo_audit():
+    """Run SXO audit on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        result = sxo_audit.audit_sxo(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 33. Content Brief Generator
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/content-brief/generate", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_content_brief():
+    """Generate a content brief for a topic."""
+    try:
+        data = request.json or {}
+        topic = data.get("topic", "").strip()
+        if not topic:
+            return jsonify({"error": "Topic is required"}), 400
+
+        keywords = data.get("keywords", [topic])
+        intent = data.get("intent", "informational")
+        language = data.get("language", "en")
+        competitor_data = data.get("competitor_data", [])
+
+        result = content_brief.generate_content_brief(
+            topic=topic,
+            target_keywords=keywords,
+            competitor_data=competitor_data,
+            intent=intent,
+            language=language,
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 34. Programmatic SEO
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/programmatic/audit", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_programmatic_audit():
+    """Run programmatic SEO analysis on a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        sample_urls = data.get("sample_urls", [])
+        result = programmatic_seo.audit_programmatic_seo(url, sample_urls=sample_urls)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+# ──────────────────────────────────────────────
+# 35. Strategic SEO Planning
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/plan/generate", methods=["POST"])
+def api_plan_generate():
+    """Generate an SEO strategy plan for an industry."""
+    try:
+        data = request.json or {}
+        industry = data.get("industry", "saas")
+        result = seo_plan.generate_seo_plan(industry)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/plan/industries")
+def api_plan_industries():
+    """Get available industry plans."""
+    return jsonify({"industries": seo_plan.get_available_plans()})
+
+
+# ──────────────────────────────────────────────
+# 36. PDF Report Generation
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/report/generate", methods=["POST"])
+def api_report_generate():
+    """Generate a PDF/HTML report from audit data."""
+    try:
+        data = request.json or {}
+        audit_data = data.get("audit_data")
+        if not audit_data:
+            session = _get_session()
+            audit_data = session.get("audit_result")
+        if not audit_data:
+            return jsonify({"error": "No audit data to generate report"}), 400
+
+        report_type = data.get("report_type", "full")
+        output_format = data.get("format", "html")
+
+        result = pdf_report.generate_report(
+            audit_data=audit_data,
+            report_type=report_type,
+            output_format=output_format,
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ──────────────────────────────────────────────
+# 37. Parallel Agent Orchestrator
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/orchestrator/audit", methods=["POST"])
+@limiter.limit("5 per minute")
+def api_orchestrator_audit():
+    """Run a full parallel audit with all SEO modules."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        exclude = data.get("exclude", [])
+        max_workers = data.get("max_workers", 6)
+
+        result = parallel_orchestrator.run_full_audit(
+            url=url,
+            exclude=exclude,
+            max_workers=max_workers,
+        )
+
+        session = _get_session()
+        session["orchestrator_result"] = result
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@require_auth
+@app.route("/api/orchestrator/focused", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_orchestrator_focused():
+    """Run a focused parallel audit with specific modules."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        modules = data.get("modules", [])
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not modules:
+            return jsonify({"error": "At least one module is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        max_workers = data.get("max_workers", 6)
+
+        result = parallel_orchestrator.run_focused_audit(
+            url=url,
+            modules=modules,
+            max_workers=max_workers,
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@require_auth
+@app.route("/api/orchestrator/info")
+def api_orchestrator_info():
+    """Get orchestrator status and available agents."""
+    return jsonify(parallel_orchestrator.get_orchestrator_info())
+
+
+# ──────────────────────────────────────────────
+# 38. Site Performance Monitoring
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/performance/dashboard", methods=["POST"])
+def api_perf_dashboard():
+    """Get performance dashboard data for a URL."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        days = data.get("days", 30)
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = site_performance.get_performance_dashboard(url, days=days)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/performance/fetch-cwv", methods=["POST"])
+def api_perf_fetch_cwv():
+    """Fetch Core Web Vitals from PageSpeed Insights."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        strategy = data.get("strategy", "mobile")
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = site_performance.fetch_cwv(url, strategy=strategy)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/performance/save-snapshot", methods=["POST"])
+def api_perf_save_snapshot():
+    """Save a performance snapshot for trend tracking."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        audit_data = data.get("audit_data", {})
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = site_performance.save_score_snapshot(url, audit_data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@require_auth
+@app.route("/api/performance/tracked-sites")
+def api_perf_tracked_sites():
+    """Get all tracked sites with latest scores."""
+    return jsonify({"sites": site_performance.get_all_tracked_sites()})
+
+
+@require_auth
+@app.route("/api/performance/crawl-trend", methods=["POST"])
+def api_perf_crawl_trend():
+    """Get crawl metrics trend."""
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        days = data.get("days", 30)
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        result = site_performance.get_crawl_trend(url, days=days)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ──────────────────────────────────────────────
+# 39. Combined Report (Orchestrator + PDF)
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/report/full-audit", methods=["POST"])
+@limiter.limit("5 per minute")
+def api_report_full_audit():
+    """
+    Run full parallel orchestrator audit AND generate a combined report.
+    This is the equivalent of claude-seo's /seo audit command.
+    Returns the orchestrator results plus report path.
+    """
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        exclude = data.get("exclude", [])
+        max_workers = data.get("max_workers", 6)
+
+        # Step 1: Run the full parallel audit
+        audit_result = parallel_orchestrator.run_full_audit(
+            url=url,
+            exclude=exclude,
+            max_workers=max_workers,
+        )
+
+        # Step 2: Generate combined HTML report
+        report_result = pdf_report.generate_report(
+            audit_data=audit_result,
+            report_type="full",
+            output_format="html",
+        )
+
+        # Step 3: Save performance snapshot
+        try:
+            site_performance.save_score_snapshot(url, audit_result)
+            site_performance.record_crawl_data(url, audit_result)
+        except Exception:
+            pass
+
+        # Store in session
+        session = _get_session()
+        session["orchestrator_result"] = audit_result
+        session["last_report"] = report_result
+
+        return jsonify({
+            "audit": audit_result,
+            "report": report_result,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 
 if __name__ == "__main__":

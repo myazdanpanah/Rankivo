@@ -33,3 +33,7 @@ test_results.txt
 Thumbs.db
 .DS_Store
 NUL
+server.log
+test_new_modules_results.json
+reports/
+test_results.json
