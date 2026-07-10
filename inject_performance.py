@@ -470,11 +470,15 @@ async function loadTrackedSites() {
 }
 """
 
-if 'loadPerformanceDashboard' not in c:
+if 'async function loadPerformanceDashboard' not in c:
     idx = c.rfind('</script>')
     if idx > 0:
         c = c[:idx] + NEW_JS + '\n' + c[idx:]
         changes.append('Added Performance + Orchestrator JS functions')
+    else:
+        changes.append('WARNING: No </script> tag found for JS injection')
+else:
+    changes.append('JS functions already present (skipped)')
 
 with open('static/index.html', 'w', encoding='utf-8') as f:
     f.write(c)
