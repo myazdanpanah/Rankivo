@@ -8,28 +8,49 @@ A powerful, all-in-one Python SEO toolkit with a **modern web dashboard**. Resea
 
 ## ✨ Features
 
+### Core SEO Tools
 | Feature | Description |
 |---|---|
-| **📊 Keyword Research** | Google autocomplete suggestions, modifier expansion, People Also Ask, related searches, SERP analysis, search intent classification |
-| **🗺️ Pillar-Cluster Map** | Auto-groups keywords into topic clusters, identifies pillar vs. cluster articles, generates a full content plan with interactive charts |
-| **✍️ Article Generator** | Creates full SEO-optimized articles (Markdown) with H1/H3 structure, keyword placement, internal link suggestions |
-| **🌐 Multi-Language Articles** | Generate articles in English or Persian (Farsi) with locale-aware prompts and SEO conventions |
-| **📦 Batch Article Generation** | Generate multiple articles from a content plan in a single request |
-| **🔄 Unified Pipeline** | One-click automated pipeline: Keyword Research → Pillar-Cluster → AI Analysis → Content Plan with priority scoring |
-| **🔍 SEO Audit** | Analyzes any URL — meta tags, headings hierarchy, word count, keyword density, internal/external links, image alt text, SEO score (0-100) |
-| **🏷️ Page-Type Audit** | Homepage, Product, Blog, and Generic page audits with auto-detection and page-type-specific scoring weights |
-| **📋 Batch Audit** | Upload a CSV of URLs, audit them concurrently, get comparison tables and charts |
-| **📈 Keyword Tracking** | Save keyword research snapshots over time, visualize trends, persist data in PostgreSQL or SQLite |
-| **📅 Content Calendar** | Generate editorial timelines from pillar-cluster plans, track status, manage deadlines |
+| **📊 Keyword Research** | Google autocomplete, modifier expansion, People Also Ask, related searches, SERP analysis, intent classification |
+| **🗺️ Pillar-Cluster Map** | Auto-groups keywords into topic clusters with pillar/cluster articles and content plan |
+| **✍️ Article Generator** | SEO-optimized articles (Markdown) with research-backed content, H1/H3 structure, keyword placement |
+| **🌐 Multi-Language** | Generate articles in English or Persian (Farsi) with locale-aware prompts |
+| **🔍 SEO Audit** | Full URL analysis — meta tags, headings, word count, keyword density, links, images, SEO score |
 | **🧠 AI Recommendations** | AI-powered SEO recommendations that analyze audit results and suggest specific fixes |
-| **📈 Google Trends** | Interest over time, related queries, trending searches, and interest by region via pytrends |
-| **🔵 Bing SEO** | Bing-specific SEO analysis, index status check, URL submission, Bing trends dashboard |
-| **🔔 Notifications** | Email and Slack webhook alerts for upcoming content calendar deadlines |
-| **📜 Audit History** | Full audit history stored in the database for trend analysis |
-| **🔐 User Management** | Multi-user support with admin/user roles, password management, database-backed authentication |
-| **⚙️ Settings** | Database-backed application settings with admin-only management |
-| **📄 PDF Export** | One-click PDF audit report generation with full SEO breakdown |
-| **📊 CSV Export** | Download keyword research data as CSV with keyword, source, and intent columns |
+| **📅 Content Calendar** | Generate editorial timelines from pillar-cluster plans, track status, manage deadlines |
+| **📈 Google Trends** | Interest over time, related queries, trending searches, interest by region, Iran province data |
+| **🔵 Bing SEO** | Bing-specific SEO analysis, index status check, URL submission, Bing trends |
+
+### Advanced SEO Modules (New in v3.0)
+| Feature | Description |
+|---|---|
+| **🏆 E-E-A-T Analysis** | Evaluate Experience, Expertise, Authoritativeness, Trustworthiness per Google Quality Rater Guidelines |
+| **🏷️ Schema.org Deep Audit** | Detect, validate, and get recommendations for 15+ Schema.org types with deprecated type tracking |
+| **🤖 GEO / AI Search** | Evaluate AI search readiness: passage citability, question headings, entity presence, attribution density |
+| **🔗 Backlink Analysis** | Analyze backlinks using Bing Webmaster API and Common Crawl with toxic link detection |
+| **📉 SEO Drift Monitoring** | Track SEO changes over time with snapshot comparison to detect regressions and improvements |
+| **🖼️ Image SEO** | Analyze alt text, file sizes, WebP/AVIF formats, responsive images, lazy loading, CLS prevention |
+| **🗺️ Sitemap Audit** | XML sitemap discovery, parsing, URL validation, deprecated tag detection |
+| **🌍 Hreflang / i18n** | Hreflang validation — self-referencing, x-default, return tag reciprocity, canonical alignment |
+| **📍 Local SEO** | Local SEO audit — GBP signals, NAP consistency, reviews, LocalBusiness schema |
+| **🛒 E-commerce SEO** | Product schema validation, pricing signals, availability, marketplace detection |
+| **✨ SXO (Search Experience)** | Page type classification, intent alignment, persona scoring, user experience optimization |
+| **📝 Content Brief Generator** | Generate content briefs with outline, keywords, competitor angles, internal link suggestions |
+| **⚙️ Programmatic SEO** | URL pattern analysis, thin content detection, index bloat identification, template analysis |
+| **♟️ SEO Strategy Planning** | Strategic SEO planning with 5 industry templates (SaaS, E-commerce, Local, Healthcare, Media) |
+| **📄 PDF/HTML Reports** | Professional audit reports with charts, severity breakdown, and actionable recommendations |
+| **⚡ Parallel Orchestrator** | Run all SEO modules simultaneously using ThreadPoolExecutor for maximum speed |
+| **📊 Site Performance** | Search Console/GA4-style dashboard with CWV tracking, score trends, and crawl monitoring |
+| **🎭 SPA Renderer** | Render JavaScript-heavy pages (React, Next.js, Vue) using headless Chromium via Playwright |
+
+### Infrastructure
+| Feature | Description |
+|---|---|
+| **🐳 Docker** | Multi-stage Docker build with Playwright Chromium, PostgreSQL, and gunicorn |
+| **🔐 User Management** | Multi-user with admin/user roles, database-backed auth, bcrypt password hashing |
+| **🔔 Notifications** | Email (SMTP) and Slack webhook alerts for content calendar deadlines |
+| **📦 Batch Audit** | Upload CSV of URLs, audit concurrently, get comparison tables and charts |
+| **📊 CSV/PDF Export** | Download keyword data as CSV and audit reports as PDF |
 
 ---
 
@@ -62,9 +83,15 @@ Double-click start.bat
 python app.py
 ```
 
+**Docker:**
+```bash
+docker build -t rankivo .
+docker run -p 5500:5500 rankivo
+```
+
 Opens at **http://localhost:5500**
 
-**Default login:** `admin` / `rankivo`
+**Default login:** `admin` / `admin12345`
 
 ---
 
@@ -72,21 +99,11 @@ Opens at **http://localhost:5500**
 
 ### Authentication
 
-By default, the dashboard is protected with a database-backed login system with role-based access:
-
 | Setting | Default | Description |
 |---|---|---|
 | `ADMIN_USERNAME` | `admin` | Login username |
-| `ADMIN_PASSWORD` | `rankivo` | Login password |
-| `SECRET_KEY` | `rankivo-change-me-in-production` | Token signing key (set a stable value in production) |
-
-Set via environment variables or in `.env`:
-
-```bash
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password
-SECRET_KEY=your-random-secret-key
-```
+| `ADMIN_PASSWORD` | `admin12345` | Login password |
+| `SECRET_KEY` | `rankivo-change-me-in-production` | Token signing key |
 
 ### AI Providers
 
@@ -101,68 +118,11 @@ SECRET_KEY=your-random-secret-key
 
 Rankivo supports **PostgreSQL** (production) with automatic **SQLite** fallback (local development).
 
-**SQLite (default, no setup needed):**
-- Data stored in `data/rankivo.db`
-- Works out of the box
+**SQLite (default):** Data stored in `data/rankivo.db`
 
-**PostgreSQL (recommended for production):**
+**PostgreSQL:**
 ```bash
-# Set in .env
 DATABASE_URL=postgresql://user:password@localhost:5432/rankivo
-```
-
-Tables are auto-created on first run:
-- `keyword_snapshots` — keyword tracking history
-- `calendar_events` — content calendar events
-- `audit_history` — SEO audit results
-- `users` — user accounts with roles
-- `settings` — application settings
-
-### Google Trends
-
-Google Trends integration uses the `pytrends` library (no API key required):
-
-```bash
-# Optional: configure locale and timezone
-GOOGLE_TRENDS_HL=en-US
-GOOGLE_TRENDS_TZ=360
-```
-
-### Bing SEO
-
-Bing SEO analysis works without an API key for on-page checks. For index status and URL submission:
-
-```bash
-BING_API_KEY=your-bing-webmaster-api-key
-```
-
-### Language Support
-
-Generate articles in multiple languages:
-
-| Code | Language |
-|---|---|
-| `en` | English (default) |
-| `fa` | فارسی (Persian/Farsi) |
-
-```bash
-DEFAULT_LANGUAGE=en
-```
-
-### Notifications
-
-**Email (SMTP):**
-```bash
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_FROM=your-email@gmail.com
-```
-
-**Slack:**
-```bash
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../xxx
 ```
 
 ---
@@ -171,158 +131,160 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../xxx
 
 ```
 Rankivo/
-├── app.py                  # Flask entry point (run this)
-├── api.py                  # REST API backend (auth, endpoints, exports)
-├── config.py               # API keys, database URL, auth & notification settings
-├── database.py             # PostgreSQL + SQLite persistence layer
-├── users.py                # User management, authentication, settings
-├── keyword_research.py     # Google autocomplete, SERP scraping, intent classification
-├── pillar_cluster.py       # Keyword clustering, content planning
-├── content_generator.py    # Pluggable AI article generation (Ollama/OpenAI/Claude/Gemini)
-├── seo_audit.py            # URL analysis (meta tags, headings, density, links, images)
-├── batch_audit.py          # Multi-URL CSV audit with comparison reports
-├── content_calendar.py     # Editorial calendar generation and export
-├── seo_recommendations.py  # AI-powered SEO recommendations + quick wins
-├── notifications.py        # Email and Slack webhook notifications
-├── google_trends.py        # Google Trends integration (pytrends)
-├── seo_bing.py             # Bing SEO analysis, index status, URL submission
+├── app.py                    # Flask entry point
+├── api.py                    # REST API (40+ endpoints)
+├── config.py                 # Configuration & shared utilities
+├── database.py               # PostgreSQL + SQLite persistence
+├── users.py                  # User management & auth
+├── keyword_research.py       # Keyword research & SERP scraping
+├── pillar_cluster.py         # Keyword clustering & content planning
+├── content_generator.py      # AI article generation (Ollama/OpenAI/Claude/Gemini)
+├── seo_audit.py              # On-page SEO audit
+├── technical_seo.py          # Technical SEO (robots.txt, sitemap, CWV)
+├── batch_audit.py            # Multi-URL batch audit
+├── seo_recommendations.py    # AI-powered recommendations
+├── content_calendar.py       # Editorial calendar
+├── google_trends.py          # Google Trends integration
+├── seo_bing.py               # Bing SEO analysis
+├── notifications.py          # Email & Slack notifications
+├── llm_keyword_intelligence.py # LLM-powered keyword analysis
+├── persian_intent_classifier.py # Persian search intent classification
+├── persian_nlp.py             # Persian NLP utilities
+├── content_gap.py            # Content gap analysis
+├── topic_researcher.py       # Topic research via web search
+├── eeat.py                   # E-E-A-T analysis
+├── schema_audit.py           # Schema.org deep audit
+├── geo_audit.py              # GEO / AI Search audit
+├── backlinks.py              # Backlink analysis
+├── seo_drift.py              # SEO drift monitoring
+├── seo_images.py             # Image SEO analysis
+├── sitemap_audit.py          # Sitemap audit
+├── hreflang_audit.py         # Hreflang / i18n audit
+├── local_seo.py              # Local SEO audit
+├── ecommerce_seo.py          # E-commerce SEO audit
+├── sxo_audit.py              # Search Experience Optimization
+├── content_brief.py          # Content brief generator
+├── programmatic_seo.py       # Programmatic SEO analysis
+├── seo_plan.py               # Strategic SEO planning
+├── pdf_report.py             # PDF/HTML report generation
+├── parallel_orchestrator.py  # Parallel agent orchestration
+├── site_performance.py       # Site performance monitoring
+├── spa_renderer.py           # SPA/JS rendering via Playwright
 ├── static/
-│   └── index.html          # Modern SPA dashboard (sidebar nav, charts, dark mode)
-├── requirements.txt        # Python dependencies
-├── start.bat               # Windows launcher with auto Python detection
-├── .gitignore              # Git ignore rules
-└── README.md               # This file
+│   └── index.html            # Modern SPA dashboard
+├── Dockerfile                # Multi-stage Docker build
+├── docker-compose.yml        # Docker Compose with PostgreSQL
+├── requirements.txt          # Python dependencies
+└── test_new_modules.py       # Integration tests (16 tests)
 ```
 
 ---
 
-## 🧩 How It Works
+## 🔌 API Endpoints (40+)
 
-1. **Enter a seed keyword** → Google autocomplete suggestions, question/commercial/informational modifiers, People Also Ask, related searches, SERP results
-2. **Build a cluster map** → Keywords grouped by similarity into pillar + cluster articles with suggested titles
-3. **Generate articles** → AI writes a full SEO article using your keyword research and SERP context (supports English & Persian)
-4. **One-click pipeline** → Automated Research → Cluster → AI Analysis → prioritized content plan
-5. **Audit any URL** → Full SEO breakdown with page-type-specific checks (homepage, product, blog)
-6. **Batch audit** → Compare multiple URLs side by side from a CSV upload
-7. **Track keywords** → Save snapshots over time, visualize trends, persist in PostgreSQL/SQLite
-8. **Plan content** → Generate editorial calendar from pillar-cluster plans, track status
-9. **Get recommendations** → AI analyzes your audit and suggests specific fixes
-10. **Analyze trends** → Google Trends interest data, related queries, trending searches
-11. **Optimize for Bing** → Bing-specific SEO checks, index status, URL submission
-12. **Export reports** → Download PDF audit reports and CSV keyword data
-13. **Stay notified** → Email/Slack alerts for upcoming content deadlines
+### Authentication
+- `POST /api/auth/login` — Login
+- `POST /api/auth/logout` — Logout
+- `GET /api/auth/check` — Check auth
+- `POST /api/auth/change-password` — Change password
+
+### Keyword Research & Clustering
+- `POST /api/keyword-research` — Run research
+- `POST /api/pillar-cluster` — Build cluster map
+- `POST /api/pipeline/run` — One-click pipeline
+
+### Content
+- `POST /api/article/generate` — Generate article
+- `POST /api/content-gap/analyze` — Content gap analysis
+- `POST /api/content-brief/generate` — Content brief
+
+### SEO Audit & Technical
+- `POST /api/audit` — SEO audit
+- `POST /api/technical/audit` — Technical SEO audit
+- `POST /api/batch-audit` — Batch audit from CSV
+
+### Advanced SEO Modules
+- `POST /api/eeat/analyze` — E-E-A-T analysis
+- `POST /api/schema/audit` — Schema.org audit
+- `POST /api/geo/audit` — GEO / AI Search audit
+- `POST /api/backlinks/analyze` — Backlink analysis
+- `POST /api/images/analyze` — Image SEO analysis
+- `POST /api/sitemap/audit` — Sitemap audit
+- `POST /api/hreflang/audit` — Hreflang audit
+- `POST /api/local-seo/audit` — Local SEO audit
+- `POST /api/ecommerce/audit` — E-commerce SEO audit
+- `POST /api/sxo/audit` — SXO audit
+- `POST /api/programmatic/audit` — Programmatic SEO audit
+- `POST /api/plan/generate` — SEO strategy plan
+
+### Parallel Orchestrator
+- `POST /api/orchestrator/audit` — Full parallel audit (all modules)
+- `POST /api/orchestrator/focused` — Focused audit (selected modules)
+- `POST /api/report/full-audit` — Parallel audit + report generation
+
+### Performance Monitoring
+- `POST /api/performance/dashboard` — Performance dashboard data
+- `POST /api/performance/fetch-cwv` — Fetch Core Web Vitals
+- `POST /api/performance/save-snapshot` — Save score snapshot
+- `GET /api/performance/tracked-sites` — List tracked sites
+
+### Trends & Bing
+- `POST /api/trends/interest-over-time` — Google Trends data
+- `POST /api/bing/analyze` — Bing SEO analysis
+- `POST /api/bing/trends` — Bing trends data
+
+### Exports
+- `POST /api/audit/export-pdf` — PDF report
+- `POST /api/keyword-research/export-csv` — CSV export
+- `POST /api/report/generate` — HTML/PDF report generation
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all integration tests
+python test_new_modules.py
+
+# Run original component tests (requires server running)
+python test_components.py
+```
+
+---
+
+## 🐳 Docker
+
+```bash
+# Build
+docker build -t rankivo .
+
+# Run standalone
+docker run -p 5500:5500 rankivo
+
+# Run with PostgreSQL (docker-compose)
+docker-compose up -d
+```
+
+The Docker image includes:
+- Python 3.12 with all dependencies
+- Playwright Chromium for SPA rendering
+- gunicorn with 4 workers
+- Health check at `/health`
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** HTML5 / CSS3 / Vanilla JS (SPA), Chart.js, Font Awesome, Marked.js
-- **Backend:** Python 3.10+, Flask, Flask-CORS
-- **AI:** Ollama (local), OpenAI, Anthropic Claude, Google Gemini (pluggable)
+- **Frontend:** HTML5 / CSS3 / Vanilla JS (SPA), Chart.js, Font Awesome
+- **Backend:** Python 3.10+, Flask, Flask-CORS, Flask-Limiter
+- **AI:** Ollama (local, free), OpenAI, Anthropic Claude, Google Gemini
 - **Database:** PostgreSQL (optional) + SQLite (default)
-- **Exports:** ReportLab (PDF), Python csv module (CSV)
-- **Scraping:** Google Autocomplete API, BeautifulSoup, googlesearch-python
+- **Exports:** ReportLab (PDF), matplotlib (charts), Python csv
+- **Scraping:** Google Autocomplete API, BeautifulSoup, requests
 - **Trends:** pytrends (Google Trends), Bing Webmaster API
-- **Notifications:** SMTP email, Slack webhooks
-
----
-
-## 🔌 API Endpoints
-
-### Authentication & Users
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/auth/login` | POST | Login and get auth token |
-| `/api/auth/logout` | POST | Logout and invalidate token |
-| `/api/auth/check` | GET | Check if token is valid |
-| `/api/auth/change-password` | POST | Change current user's password |
-| `/api/users` | GET | List all users (admin only) |
-| `/api/users` | POST | Create a new user (admin only) |
-| `/api/users/<username>` | DELETE | Delete a user (admin only) |
-
-### Keyword Research & Clustering
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/keyword-research` | POST | Run keyword research |
-| `/api/keyword-research` | GET | Get cached keyword data from session |
-| `/api/keyword-research/export-csv` | POST | Export keywords as CSV |
-| `/api/pillar-cluster` | POST | Build pillar-cluster map |
-| `/api/pillar-cluster` | GET | Get cached cluster map from session |
-
-### Content Generation
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/article/generate` | POST | Generate single SEO article |
-| `/api/article/generate-batch` | POST | Generate multiple articles from content plan |
-| `/api/article/providers` | GET | List available AI providers |
-
-### SEO Audit
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/audit` | POST | Run SEO audit on a URL |
-| `/api/audit/export-pdf` | POST | Export audit as PDF report |
-| `/api/batch-audit` | POST | Run batch audit from CSV |
-| `/api/batch-audit/sample-csv` | GET | Download sample CSV template |
-| `/api/audit-history` | GET | View past audit results |
-
-### Keyword Tracking & Calendar
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/tracking` | GET | List tracked keywords |
-| `/api/tracking` | POST | Track current keyword research |
-| `/api/tracking/<keyword>` | DELETE | Remove keyword from tracking |
-| `/api/tracking/<keyword>/history` | GET | Get keyword tracking history |
-| `/api/calendar` | GET | Get content calendar |
-| `/api/calendar` | POST | Generate calendar from cluster map |
-| `/api/calendar/<event_id>` | PATCH | Update event status |
-| `/api/calendar/<event_id>` | DELETE | Delete calendar event |
-| `/api/calendar/export/<fmt>` | GET | Export calendar (markdown/json) |
-
-### AI & Pipeline
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/recommendations` | POST | Generate AI SEO recommendations |
-| `/api/recommendations/quick-wins` | GET | Get quick-win fixes (no AI needed) |
-| `/api/pipeline/run` | POST | One-click: Research → Cluster → AI Analysis → Content Plan |
-
-### Google Trends
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/trends/interest-over-time` | POST | Get interest over time for keywords |
-| `/api/trends/related-queries` | POST | Get top & rising related queries |
-| `/api/trends/trending` | GET | Get today's trending searches |
-| `/api/trends/interest-by-region` | POST | Get interest breakdown by region |
-| `/api/trends/status` | GET | Check Google Trends availability |
-
-### Bing SEO
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/bing/analyze` | POST | Analyze page for Bing-specific SEO factors |
-| `/api/bing/index-status` | POST | Check if URL is indexed in Bing |
-| `/api/bing/submit` | POST | Submit URL to Bing for indexing |
-| `/api/bing/status` | GET | Check Bing API configuration |
-| `/api/bing/trends` | POST | Get Bing search interest data |
-
-### Settings & System
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/settings` | GET | Get all application settings |
-| `/api/settings` | POST | Update settings (admin only) |
-| `/api/languages` | GET | List supported languages |
-| `/api/status` | GET | Server status and available providers |
-
----
-
-## ⚠️ Notes
-
-- **Google scraping** is used for free keyword data. Avoid rapid repeated requests to prevent rate limiting.
-- **Ollama** requires ~8GB+ RAM for LLaMA 3. Smaller models work on less RAM.
-- Keyword research results are cached in the session for faster repeat searches.
-- The tool uses heuristic intent classification — for production use, consider integrating a paid keyword data API.
-- Auth tokens are stored in-memory — they reset when the server restarts.
-- **Google Trends** data may be rate-limited by Google. Use sparingly in automated pipelines.
-- **Bing index status** requires a valid `BING_API_KEY` from [Bing Webmaster Tools](https://www.bing.com/webmasters).
-- **Persian (Farsi)** article generation requires an AI provider that supports RTL text well (Claude and GPT-4 recommended).
+- **Rendering:** Playwright (headless Chromium for SPA pages)
+- **Threading:** ThreadPoolExecutor for parallel SEO analysis
+- **Auth:** bcrypt password hashing, token-based authentication
 
 ---
 
@@ -335,52 +297,3 @@ MIT
 ## 🤝 Contributing
 
 Contributions welcome! Please open an issue or PR.
-
----
-
-## 📋 Changelog
-
-### v2.0.0 (Latest)
-
-#### 🆕 New Features
-- **Google Trends Integration** — Interest over time, related queries, trending searches, and regional interest data via pytrends
-- **Bing SEO Module** — Bing-specific SEO analysis, index status checking, URL submission, and Bing trends dashboard
-- **User Management** — Multi-user support with admin/user roles, password management, database-backed auth with `users` table
-- **Batch Article Generation** — Generate multiple articles from a content plan in a single API call
-- **Unified Auto-Pipeline** — One-click automated pipeline: Research → Cluster → AI Analysis → Content Plan with AI-powered priority scoring
-- **Multi-Language Support** — Generate articles in English (default) or Persian (Farsi) with locale-aware prompts and SEO conventions
-- **Settings Management** — Database-backed application settings with admin-only API management
-- **Page-Type-Specific Audit** — Homepage, Product, Blog, and Generic audit modes with auto-detection from URL patterns and type-specific scoring weights
-- **Windows Launcher** — `start.bat` with automatic Python detection, dependency installation, and port conflict checking
-
-#### 🔧 Improvements
-- Authentication now uses database-backed users with role-based access control (admin/user)
-- Login endpoint returns user role for frontend permission handling
-- Keyword research automatically fetches Google Trends data for the seed keyword
-- Pillar-cluster maps include Google Trends interest data
-- Article generator supports Persian (Farsi) with dedicated system prompts
-- SEO audit scoring is weighted differently per page type (homepage links, product images, blog content depth)
-
-#### 🐛 Bug Fixes
-- Fixed `google_trends.py` using `TrendReq` directly instead of `_TrendReqClass` alias
-- Fixed redundant `import json as json_module` inside pipeline endpoint
-- Removed unused `Optional` import in `content_calendar.py`
-
-#### 🗑️ Removed Dead Code
-- Deleted `keyword_tracker.py` (entire file — fully replaced by `database.py` db_* functions)
-- Removed file-based calendar functions from `content_calendar.py` (`save_calendar_events`, `load_calendar_events`, `update_event_status`, `delete_event`) — replaced by database equivalents
-- Removed `generate_comparison_markdown()` from `batch_audit.py` (unused)
-- Removed `check_and_notify()` from `notifications.py` (unused)
-- Removed unused dependencies: `streamlit`, `plotly`, `pandas` from `requirements.txt`
-
-### v1.0.0 (Initial Release)
-
-- Initial release with keyword research, pillar-cluster mapping, AI article generation
-- SEO audit with scoring, batch audit with CSV import
-- Content calendar with editorial planning
-- AI-powered SEO recommendations and quick wins
-- Email and Slack notifications for deadlines
-- PDF audit export and CSV keyword export
-- PostgreSQL + SQLite database support
-- Token-based authentication
-- Modern SPA dashboard with dark mode
