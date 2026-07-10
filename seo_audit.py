@@ -5,12 +5,10 @@ Analyzes a URL for meta tags, headings, word count, keyword density, links, and 
 import requests
 import re
 from urllib.parse import urlparse, urljoin
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 PAGE_TYPES = {
@@ -90,7 +88,7 @@ def audit_url(url: str, focus_keyword: str = "", page_type: str = "generic") -> 
         url = "https://" + url
 
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
     except requests.RequestException as e:

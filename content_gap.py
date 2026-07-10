@@ -10,12 +10,10 @@ import re
 import ipaddress
 from collections import Counter
 from typing import Optional
-from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, suppress_output
+from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, suppress_output, random_ua
 
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 def _is_safe_url(url: str) -> bool:
     """Check if a URL is safe to fetch (blocks private IPs, localhost, metadata endpoints)."""
@@ -94,7 +92,7 @@ def extract_page_content(url: str) -> dict:
 
     try:
         from bs4 import BeautifulSoup
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")

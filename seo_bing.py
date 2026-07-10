@@ -8,6 +8,7 @@ import requests
 import traceback
 from typing import Optional
 from config import (
+    random_ua,
     REQUEST_TIMEOUT,
     USER_AGENTS,
     BING_API_KEY,
@@ -15,8 +16,6 @@ from config import (
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -160,7 +159,7 @@ def analyze_bing_seo(url: str, html_content: Optional[str] = None, page_data: Op
     # Fetch the page if not provided
     if not fetched_html:
         try:
-            headers = {"User-Agent": _random_ua()}
+            headers = {"User-Agent": random_ua()}
             resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
             if resp.status_code == 200:
                 fetched_html = resp.text

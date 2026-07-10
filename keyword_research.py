@@ -10,6 +10,7 @@ import time
 import random
 import re
 from config import (
+    random_ua,
     REQUEST_TIMEOUT,
     USER_AGENTS,
     DEFAULT_NUM_SUGGESTIONS,
@@ -19,14 +20,12 @@ from config import (
 )
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 def _get_session():
     """Create a requests session with persistent headers to look like a real browser."""
     s = requests.Session()
-    ua = _random_ua()
+    ua = random_ua()
     s.headers.update({
         "User-Agent": ua,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -55,7 +54,7 @@ def get_google_suggestions(seed_keyword: str, num: int = DEFAULT_NUM_SUGGESTIONS
     """
     query = seed_keyword.replace(" ", "+")
     url = f"http://suggestqueries.google.com/complete/search?output=firefox&q={query}"
-    headers = {"User-Agent": _random_ua()}
+    headers = {"User-Agent": random_ua()}
     try:
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()

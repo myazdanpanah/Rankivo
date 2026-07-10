@@ -512,7 +512,7 @@ function btnLoading(id, loading) {
 }
 """
 
-if 'runImageAnalysis' not in c:
+if 'async function runImageAnalysis' not in c:
     idx = c.rfind('</script>')
     if idx > 0:
         c = c[:idx] + NEW_JS + '\n' + c[idx:]

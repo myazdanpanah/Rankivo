@@ -141,3 +141,10 @@ class suppress_output:
     def __exit__(self, *args):
         sys.stdout = self._orig_stdout
         sys.stderr = self._orig_stderr
+
+import random as _random
+
+def random_ua() -> str:
+    """Return a random User-Agent string from the shared pool."""
+    return _random.choice(USER_AGENTS)
+

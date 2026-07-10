@@ -7,12 +7,10 @@ import re
 import requests
 from datetime import datetime
 from urllib.parse import urlparse
-from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print
+from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────

@@ -6,12 +6,10 @@ template analysis, index bloat, and internal linking patterns.
 import re
 import requests
 from urllib.parse import urlparse, urljoin
-from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print
+from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -77,7 +75,7 @@ def _analyze_url_patterns(urls: list[str]) -> dict:
 def _check_thin_content(url: str) -> dict:
     """Check a single page for thin content."""
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
 
@@ -160,7 +158,7 @@ def _check_index_bloat(soup, body_text: str) -> dict:
 def _analyze_template(url: str) -> dict:
     """Analyze page template structure."""
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
 
@@ -227,7 +225,7 @@ def audit_programmatic_seo(url: str, sample_urls: list[str] = None) -> dict:
 
     # Fetch page for index bloat check
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
 

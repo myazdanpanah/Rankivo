@@ -7,12 +7,10 @@ import os
 import time
 import requests
 from urllib.parse import urlparse
-from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print
+from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -112,7 +110,7 @@ def render_with_playwright(
                 args=["--no-sandbox", "--disable-setuid-sandbox"],
             )
             context = browser.new_context(
-                user_agent=_random_ua(),
+                user_agent=random_ua(),
                 viewport={"width": 1920, "height": 1080},
             )
             page = context.new_page()
@@ -173,7 +171,7 @@ def render_with_playwright(
 def render_with_requests(url: str) -> dict:
     """Standard HTTP fetch fallback when Playwright is not available."""
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
 
         return {
@@ -233,7 +231,7 @@ def render_page(
     # Auto-detect: first fetch raw HTML, check if SPA
     if auto_detect:
         try:
-            headers = {"User-Agent": _random_ua()}
+            headers = {"User-Agent": random_ua()}
             resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
             raw_html = resp.text
 

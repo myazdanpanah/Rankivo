@@ -2383,6 +2383,63 @@ def api_report_full_audit():
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 
+
+# ──────────────────────────────────────────────
+# Intent Training Data Management
+# ──────────────────────────────────────────────
+
+_intent_training_data = {}  # intent -> list of {word, language}
+
+
+@require_auth
+@app.route("/api/intent-training", methods=["GET"])
+def api_intent_training_get():
+    total = sum(len(v) for v in _intent_training_data.values())
+    return jsonify({"training_data": _intent_training_data, "total": total})
+
+
+@require_auth
+@app.route("/api/intent-training", methods=["POST"])
+def api_intent_training_add():
+    data = request.json or {}
+    word = data.get("word", "").strip()
+    intent = data.get("intent", "informational")
+    if not word:
+        return jsonify({"error": "Word is required"}), 400
+    if intent not in _intent_training_data:
+        _intent_training_data[intent] = []
+    existing = [
+        e for e in _intent_training_data[intent]
+        if (e.get("word") if isinstance(e, dict) else e) == word
+    ]
+    if existing:
+        return jsonify({"error": f"Word '{word}' already exists in {intent}"}), 409
+    _intent_training_data[intent].append({
+        "word": word,
+        "language": data.get("language", "auto"),
+    })
+    return jsonify({"success": True, "word": word, "intent": intent})
+
+
+@require_auth
+@app.route("/api/intent-training", methods=["DELETE"])
+def api_intent_training_delete():
+    data = request.json or {}
+    word = data.get("word", "").strip()
+    intent = data.get("intent", "")
+    if not word or not intent:
+        return jsonify({"error": "Word and intent are required"}), 400
+    if intent in _intent_training_data:
+        before = len(_intent_training_data[intent])
+        _intent_training_data[intent] = [
+            e for e in _intent_training_data[intent]
+            if (e.get("word") if isinstance(e, dict) else e) != word
+        ]
+        if len(_intent_training_data[intent]) < before:
+            return jsonify({"success": True, "removed": word})
+    return jsonify({"error": f"Word '{word}' not found in {intent}"}), 404
+
+
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
     print(f"Rankivo Web UI starting at http://localhost:{PORT}")

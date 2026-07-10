@@ -10,14 +10,13 @@ import time
 import requests
 from datetime import datetime, timedelta
 from config import (
+    random_ua,
     REQUEST_TIMEOUT, USER_AGENTS, BING_API_KEY, PAGESPEED_API_KEY,
     _safe_print,
 )
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")

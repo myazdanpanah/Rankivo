@@ -6,12 +6,10 @@ x-default, language codes, and canonical alignment.
 import re
 import requests
 from urllib.parse import urlparse, urljoin
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ISO 639-1 valid language codes (common subset)
@@ -221,7 +219,7 @@ def audit_hreflang(url: str) -> dict:
 
     # Fetch page
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
     except requests.RequestException as e:

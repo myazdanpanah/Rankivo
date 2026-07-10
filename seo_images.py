@@ -7,11 +7,9 @@ import re
 import random
 import requests
 from urllib.parse import urlparse, urljoin
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, random_ua
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -220,7 +218,7 @@ def _check_file_sizes(img_urls: list[str]) -> dict:
 
     for url in sample:
         try:
-            headers = {"User-Agent": _random_ua()}
+            headers = {"User-Agent": random_ua()}
             resp = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
             content_length = int(resp.headers.get("content-length", 0))
             content_type = resp.headers.get("content-type", "")
@@ -297,7 +295,7 @@ def analyze_images(url: str) -> dict:
 
     # Fetch page
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
     except requests.RequestException as e:

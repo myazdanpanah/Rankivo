@@ -7,12 +7,10 @@ then produces a composite E-E-A-T grade.
 import re
 import requests
 from urllib.parse import urlparse
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -517,7 +515,7 @@ def analyze_eear_t(url: str) -> dict:
 
     # Fetch page
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
     except requests.RequestException as e:

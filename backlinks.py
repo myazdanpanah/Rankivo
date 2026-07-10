@@ -6,12 +6,10 @@ Provides domain authority estimation, link quality assessment, and toxic link de
 import re
 import requests
 from urllib.parse import urlparse
-from config import REQUEST_TIMEOUT, USER_AGENTS, BING_API_KEY, _safe_print
+from config import REQUEST_TIMEOUT, USER_AGENTS, BING_API_KEY, _safe_print, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -114,7 +112,7 @@ def _get_common_crawl_backlinks(url: str) -> dict:
     try:
         # Use Common Crawl index API
         index_url = f"https://index.commoncrawl.org/CC-MAIN-2024-51-index?url={domain}&output=json&limit=20"
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(index_url, headers=headers, timeout=30)
 
         if resp.status_code == 200:

@@ -8,11 +8,9 @@ import random
 import re
 import requests
 from collections import Counter
-from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, suppress_output
+from config import REQUEST_TIMEOUT, USER_AGENTS, _safe_print, suppress_output, random_ua
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -77,7 +75,7 @@ def search_google(query: str, num_results: int = 8) -> list[dict]:
 def extract_page_content(url: str) -> dict:
     """Fetch a page and extract structured content."""
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
 

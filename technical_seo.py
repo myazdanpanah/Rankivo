@@ -6,12 +6,10 @@ import json
 import requests
 import traceback
 from urllib.parse import urlparse, urljoin
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 # ──────────────────────────────────────────────
@@ -39,7 +37,7 @@ def analyze_robots_txt(url: str) -> dict:
     }
 
     try:
-        resp = requests.get(robots_url, headers={"User-Agent": _random_ua()}, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(robots_url, headers={"User-Agent": random_ua()}, timeout=REQUEST_TIMEOUT)
         if resp.status_code == 404:
             result["issues"].append({
                 "severity": "critical",
@@ -152,7 +150,7 @@ def analyze_sitemap(url: str, sitemap_url: str = "") -> dict:
     }
 
     try:
-        resp = requests.get(sitemap_url, headers={"User-Agent": _random_ua()}, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(sitemap_url, headers={"User-Agent": random_ua()}, timeout=REQUEST_TIMEOUT)
         if resp.status_code == 404:
             result["issues"].append({
                 "severity": "critical",
@@ -269,7 +267,7 @@ def analyze_structured_data(url: str) -> dict:
     }
 
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
     except requests.RequestException as e:

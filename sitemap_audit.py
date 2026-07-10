@@ -7,12 +7,10 @@ import re
 import requests
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
-from config import REQUEST_TIMEOUT, USER_AGENTS
+from config import REQUEST_TIMEOUT, USER_AGENTS, random_ua
 import random
 
 
-def _random_ua() -> str:
-    return random.choice(USER_AGENTS)
 
 
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
@@ -33,7 +31,7 @@ def discover_sitemaps(url: str) -> dict:
     # 1. Check robots.txt for Sitemap directives
     robots_url = f"{base}/robots.txt"
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(robots_url, headers=headers, timeout=REQUEST_TIMEOUT)
         if resp.status_code == 200:
             for line in resp.text.split("\n"):
@@ -62,7 +60,7 @@ def discover_sitemaps(url: str) -> dict:
         if already_found:
             continue
         try:
-            headers = {"User-Agent": _random_ua()}
+            headers = {"User-Agent": random_ua()}
             resp = requests.head(sitemap_url, headers=headers, timeout=5, allow_redirects=True)
             if resp.status_code == 200:
                 ct = resp.headers.get("content-type", "")
@@ -74,7 +72,7 @@ def discover_sitemaps(url: str) -> dict:
 
     # 3. Check HTML for sitemap link
     try:
-        headers = {"User-Agent": _random_ua()}
+        headers = {"User-Agent": random_ua()}
         resp = requests.get(base, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True)
         if resp.status_code == 200:
             html = resp.text.lower()
@@ -272,7 +270,7 @@ def audit_sitemap(url: str) -> dict:
         detail = {"url": sm_url, "source": sm_info.get("source", "")}
 
         try:
-            headers = {"User-Agent": _random_ua()}
+            headers = {"User-Agent": random_ua()}
             resp = requests.get(sm_url, headers=headers, timeout=REQUEST_TIMEOUT)
             resp.raise_for_status()
             content = resp.text
