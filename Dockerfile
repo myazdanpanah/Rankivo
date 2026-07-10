@@ -42,8 +42,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=builder /app/wheels /wheels
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
-# Install Playwright browsers (Chromium)
-RUN pip install --no-cache-dir playwright && playwright install chromium
+# Install Playwright browsers (Chromium) — already in wheels from requirements.txt
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers
+RUN playwright install chromium
 
 # Copy application code
 COPY . .
