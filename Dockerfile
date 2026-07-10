@@ -20,9 +20,12 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.t
 # ── Stage 2: Lean runtime image ──────────────────────
 FROM python:3.12-slim
 
-# Runtime libs for psycopg2
+# Runtime libs for psycopg2 + Playwright Chromium dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 curl && \
+    libpq5 curl wget gnupg fonts-liberation libatk-bridge2.0-0 \
+    libatk1.0-0 libcups2 libdrm2 libgbm1 libgtk-3-0 libnss3 \
+    libxcomposite1 libxdamage1 libxfixes3 libxkbcommon0 \
+    libxrandr2 xdg-utils && \
     rm -rf /var/lib/apt/lists/*
 
 # Non-root user
@@ -38,6 +41,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Install Python wheels from builder
 COPY --from=builder /app/wheels /wheels
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
+
+# Install Playwright browsers (Chromium)
+RUN pip install --no-cache-dir playwright && playwright install chromium
 
 # Copy application code
 COPY . .
