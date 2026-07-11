@@ -3705,6 +3705,7 @@ function navigate(page) {
   if (pageEl) pageEl.classList.add('active');
   if (navEl) navEl.classList.add('active');
   if (page === 'ai-chat') initChat();
+  if (page === 'performance') startMonitorAutoRefresh(); else stopMonitorAutoRefresh();
 
   const titles = {
     en: {

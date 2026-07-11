@@ -347,12 +347,26 @@ function exportChatJSON() {
 
 function shareChatLink() {
   const sessionId = localStorage.getItem('session_id');
-  const link = window.location.origin + '/api/chat/history?session=' + sessionId;
+  // Export current chat as shareable markdown
+  if (!chatMessages.length) {
+    if (typeof showToast === 'function') showToast('No messages to share', 'warning');
+    return;
+  }
+  let md = '# Rankivo AI Chat
+
+';
+  chatMessages.forEach(msg => {
+    const role = msg.role === 'user' ? '**You**' : '**AI**';
+    md += role + ': ' + msg.content + '
+
+';
+  });
+  // Copy to clipboard as formatted text
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(link).then(() => {
-      if (typeof showToast === 'function') showToast('Chat link copied to clipboard!', 'success');
+    navigator.clipboard.writeText(md).then(() => {
+      if (typeof showToast === 'function') showToast('Chat copied to clipboard!', 'success');
     });
   } else {
-    prompt('Copy this link:', link);
+    prompt('Copy this chat:', md);
   }
 }
