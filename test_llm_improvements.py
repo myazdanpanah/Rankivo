@@ -16,6 +16,9 @@ class TestCheckOllama(unittest.TestCase):
 
     def test_check_ollama_returns_false_when_offline(self):
         from config import check_ollama
+        import config
+        config._ollama_check_cache = None
+        config._ollama_check_cache_time = 0
         with patch('requests.get', side_effect=Exception('Connection refused')):
             result = check_ollama()
             self.assertFalse(result)
