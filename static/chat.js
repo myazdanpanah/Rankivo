@@ -292,3 +292,67 @@ function toggleVoiceInput() {
   
   voiceRecognition.start();
 }
+
+// Chat Export
+function exportChatMarkdown() {
+  if (!chatMessages.length) {
+    if (typeof showToast === 'function') showToast('No messages to export', 'warning');
+    return;
+  }
+  let md = '# Rankivo AI Chat Export
+
+';
+  md += 'Date: ' + new Date().toLocaleDateString() + '
+
+';
+  chatMessages.forEach(msg => {
+    const role = msg.role === 'user' ? '**You**' : msg.role === 'assistant' ? '**Rankivo AI**' : '*System*';
+    md += role + ':
+
+' + msg.content + '
+
+---
+
+';
+  });
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'rankivo-chat-' + Date.now() + '.md';
+  a.click();
+  URL.revokeObjectURL(url);
+  if (typeof showToast === 'function') showToast('Chat exported as Markdown', 'success');
+}
+
+function exportChatJSON() {
+  if (!chatMessages.length) {
+    if (typeof showToast === 'function') showToast('No messages to export', 'warning');
+    return;
+  }
+  const data = {
+    exportDate: new Date().toISOString(),
+    sessionId: localStorage.getItem('session_id'),
+    messages: chatMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp }))
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'rankivo-chat-' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  if (typeof showToast === 'function') showToast('Chat exported as JSON', 'success');
+}
+
+function shareChatLink() {
+  const sessionId = localStorage.getItem('session_id');
+  const link = window.location.origin + '/api/chat/history?session=' + sessionId;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => {
+      if (typeof showToast === 'function') showToast('Chat link copied to clipboard!', 'success');
+    });
+  } else {
+    prompt('Copy this link:', link);
+  }
+}
