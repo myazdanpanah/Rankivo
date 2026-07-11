@@ -438,3 +438,316 @@ def get_orchestrator_info() -> dict:
     """Get information about the orchestrator and available agents."""
     orch = ParallelOrchestrator()
     return orch.get_status()
+
+
+# ──────────────────────────────────────────────
+# Comprehensive Report Synthesis
+# ──────────────────────────────────────────────
+
+# Category definitions with weights and module mappings
+REPORT_CATEGORIES = {
+    "technical_seo": {
+        "label": "Technical SEO",
+        "weight": 22,
+        "icon": "fa-cogs",
+        "modules": ["technical_seo", "seo_audit"],
+    },
+    "content_quality": {
+        "label": "Content Quality",
+        "weight": 23,
+        "icon": "fa-file-alt",
+        "modules": ["eeat"],
+    },
+    "onpage_seo": {
+        "label": "On-Page SEO",
+        "weight": 20,
+        "icon": "fa-tags",
+        "modules": ["sxo_audit"],
+    },
+    "schema_structured_data": {
+        "label": "Schema / Structured Data",
+        "weight": 10,
+        "icon": "fa-code",
+        "modules": ["schema_audit"],
+    },
+    "performance": {
+        "label": "Performance (CWV)",
+        "weight": 10,
+        "icon": "fa-tachometer-alt",
+        "modules": ["technical_seo"],
+    },
+    "ai_search_readiness": {
+        "label": "AI Search Readiness",
+        "weight": 10,
+        "icon": "fa-robot",
+        "modules": ["geo_audit"],
+    },
+    "images_seo": {
+        "label": "Images SEO",
+        "weight": 5,
+        "icon": "fa-images",
+        "modules": ["seo_images"],
+    },
+}
+
+
+def _health_status(score: int) -> str:
+    """Map score to health status label and emoji."""
+    if score >= 90:
+        return "\U0001f7e2 Excellent"
+    elif score >= 80:
+        return "\U0001f7e2 Good"
+    elif score >= 70:
+        return "\U0001f7e1 Improvement"
+    elif score >= 55:
+        return "\U0001f7e0 Caution"
+    elif score >= 40:
+        return "\U0001f534 Warning"
+    else:
+        return "\U0001f534 Critical"
+
+
+def _score_color(score: int) -> str:
+    if score >= 80:
+        return "success"
+    elif score >= 60:
+        return "warning"
+    else:
+        return "danger"
+
+
+def _count_critical_issues(module_results: dict, modules: list[str]) -> int:
+    """Count critical/high-severity issues from specific modules."""
+    count = 0
+    for mod_name in modules:
+        result = module_results.get(mod_name, {})
+        if not isinstance(result, dict):
+            continue
+        for issue in result.get("issues", []):
+            if issue.get("severity") == "critical":
+                count += 1
+    return count
+
+
+def _extract_findings(module_results: dict, modules: list[str]) -> list[dict]:
+    """Extract all findings from specific modules."""
+    findings = []
+    for mod_name in modules:
+        result = module_results.get(mod_name, {})
+        if not isinstance(result, dict):
+            continue
+        for issue in result.get("issues", []):
+            findings.append(issue)
+        for rec in result.get("recommendations", []):
+            if isinstance(rec, dict):
+                findings.append({
+                    "severity": "info",
+                    "message": rec.get("action", str(rec)),
+                    "category": mod_name,
+                })
+    return findings
+
+
+def synthesize_comprehensive_report(url: str, module_results: dict, timings: dict) -> dict:
+    """
+    Synthesize orchestrator results into a comprehensive report
+    matching the Claude-SEO audit format with weighted categories,
+    executive summary, quick wins, and prioritized action plan.
+    """
+    now = datetime.now()
+    total_elapsed = sum(timings.values())
+
+    # ── Build category scores ──
+    categories = []
+    all_findings = []
+    all_critical = []
+    all_warnings = []
+    weighted_score_sum = 0
+    total_weight = 0
+
+    for cat_key, cat_def in REPORT_CATEGORIES.items():
+        cat_score = 0
+        cat_modules_used = 0
+
+        for mod_name in cat_def["modules"]:
+            result = module_results.get(mod_name, {})
+            if not isinstance(result, dict) or "error" in result:
+                continue
+            s = result.get("score", result.get("composite_score", result.get("overall_score")))
+            if s is not None:
+                cat_score += s
+                cat_modules_used += 1
+
+        if cat_modules_used > 0:
+            cat_score = round(cat_score / cat_modules_used)
+        else:
+            cat_score = 0
+
+        findings = _extract_findings(module_results, cat_def["modules"])
+        critical_count = _count_critical_issues(module_results, cat_def["modules"])
+
+        cat_data = {
+            "key": cat_key,
+            "label": cat_def["label"],
+            "weight": cat_def["weight"],
+            "icon": cat_def["icon"],
+            "score": cat_score,
+            "health_status": _health_status(cat_score),
+            "color": _score_color(cat_score),
+            "findings_count": len(findings),
+            "critical_issues": critical_count,
+            "findings": findings[:20],
+        }
+        categories.append(cat_data)
+        all_findings.extend(findings)
+        all_critical.extend([f for f in findings if f.get("severity") == "critical"])
+        all_warnings.extend([f for f in findings if f.get("severity") == "warning"])
+
+        weighted_score_sum += cat_score * cat_def["weight"]
+        total_weight += cat_def["weight"]
+
+    overall_score = round(weighted_score_sum / total_weight) if total_weight > 0 else 0
+
+    # ── Grade ──
+    if overall_score >= 90:
+        grade, grade_label = "A+", "Excellent"
+    elif overall_score >= 80:
+        grade, grade_label = "A", "Good"
+    elif overall_score >= 70:
+        grade, grade_label = "B+", "Needs Attention"
+    elif overall_score >= 60:
+        grade, grade_label = "B", "Needs Work"
+    elif overall_score >= 50:
+        grade, grade_label = "C+", "Below Average"
+    elif overall_score >= 40:
+        grade, grade_label = "C", "Poor"
+    else:
+        grade, grade_label = "F", "Critical"
+
+    # ── Business type detection ──
+    business_type = "Unknown"
+    seo_result = module_results.get("seo_audit", {})
+    if isinstance(seo_result, dict):
+        page_type = seo_result.get("page_type", "generic")
+        page_type_info = seo_result.get("page_type_info", {})
+        if page_type == "homepage":
+            business_type = "Brand / Homepage"
+        elif page_type == "product":
+            business_type = "E-commerce / Service Page"
+        elif page_type == "blog":
+            business_type = "Publisher / Blog"
+        else:
+            business_type = "General Website"
+
+    # ── Quick wins (from all module recommendations) ──
+    quick_wins = []
+    for mod_name, result in module_results.items():
+        if not isinstance(result, dict) or "error" in result:
+            continue
+        for rec in result.get("recommendations", []):
+            if isinstance(rec, dict) and rec.get("priority") in ("high", "medium"):
+                quick_wins.append({
+                    "action": rec.get("action", ""),
+                    "priority": rec.get("priority", "medium"),
+                    "source": mod_name,
+                })
+        # Also pull from issues as quick wins
+        for issue in result.get("issues", []):
+            if issue.get("severity") == "critical":
+                quick_wins.append({
+                    "action": issue.get("message", ""),
+                    "priority": "high",
+                    "source": mod_name,
+                })
+
+    # Deduplicate and limit
+    seen_actions = set()
+    unique_wins = []
+    for w in quick_wins:
+        action_key = w["action"][:80]
+        if action_key not in seen_actions:
+            seen_actions.add(action_key)
+            unique_wins.append(w)
+    quick_wins = unique_wins[:10]
+
+    # ── Top 5 critical issues ──
+    top_critical = []
+    for finding in all_critical[:5]:
+        top_critical.append({
+            "message": finding.get("message", ""),
+            "category": finding.get("category", ""),
+            "severity": "critical",
+        })
+
+    # ── Priority Action Plan ──
+    action_plan = {
+        "phase_1": {
+            "title": "Phase 1: Critical Fixes",
+            "timeline": "Immediate (\u2264 1 Week)",
+            "color": "danger",
+            "items": [],
+        },
+        "phase_2": {
+            "title": "Phase 2: High-Impact Improvements",
+            "timeline": "1 - 3 Weeks",
+            "color": "warning",
+            "items": [],
+        },
+        "phase_3": {
+            "title": "Phase 3: Optimization & Growth",
+            "timeline": "1 - 2 Months",
+            "color": "success",
+            "items": [],
+        },
+    }
+
+    for w in unique_wins:
+        if w["priority"] == "high":
+            action_plan["phase_1"]["items"].append(w["action"])
+        elif w["priority"] == "medium":
+            action_plan["phase_2"]["items"].append(w["action"])
+        else:
+            action_plan["phase_3"]["items"].append(w["action"])
+
+    # Ensure each phase has at least a placeholder
+    for phase in action_plan.values():
+        if not phase["items"]:
+            phase["items"].append("No items in this phase")
+
+    # ── Build final report ──
+    report = {
+        "url": url,
+        "generated_at": now.isoformat(),
+        "generated_date": now.strftime("%Y-%m-%d"),
+        "total_audit_time": round(total_elapsed, 2),
+
+        "overall_score": overall_score,
+        "grade": grade,
+        "grade_label": grade_label,
+
+        "business_type": business_type,
+
+        "categories": categories,
+        "total_findings": len(all_findings),
+        "total_critical": len(all_critical),
+        "total_warnings": len(all_warnings),
+
+        "top_critical_issues": top_critical,
+        "quick_wins": quick_wins,
+        "action_plan": action_plan,
+
+        "module_scores": {
+            name: (
+                result.get("score", result.get("composite_score", result.get("overall_score", 0)))
+                if isinstance(result, dict) and "error" not in result
+                else 0
+            )
+            for name, result in module_results.items()
+        },
+        "module_timings": timings,
+        "modules_run": len(module_results),
+
+        "module_results": module_results,
+    }
+
+    return report

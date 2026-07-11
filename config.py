@@ -9,9 +9,17 @@ import sys
 # Set your API keys via environment variables or in a .env file
 # The tool will auto-detect which providers are available
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 
+# --- Default Provider ---
+# The new preferred local LLM stack provider (Ollama)
+DEFAULT_PROVIDER = "ollama" 
+DEFAULT_MODEL = "gemma4:latest"
+
+# Overwrite or set default models
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:latest") # <-- Set to gemma4:latest
+
+# Fallbacks (optional)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 

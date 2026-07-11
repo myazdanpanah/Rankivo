@@ -579,7 +579,7 @@ def _generate_page_type_insights(data: dict, page_type: str) -> dict:
         links = data["links"]
         if links["internal_count"] < 10:
             insights["recommendations"].append(
-                f"Add internal links to your top {10 - links["internal_count"]} most important pages (categories, products, contact)"
+                f"Add internal links to your top {10 - links['internal_count']} most important pages (categories, products, contact)"
             )
         if not data.get("og_tags", {}).get("og:title"):
             insights["recommendations"].append("Add Open Graph tags for better social media sharing")

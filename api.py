@@ -2330,6 +2330,54 @@ def api_perf_crawl_trend():
 # ──────────────────────────────────────────────
 
 @require_auth
+@app.route("/api/report/comprehensive", methods=["POST"])
+@limiter.limit("5 per minute")
+def api_report_comprehensive():
+    """
+    Run full parallel audit and produce a comprehensive report
+    matching the Claude-SEO audit format with weighted categories,
+    executive summary, quick wins, and prioritized action plan.
+    """
+    try:
+        data = request.json or {}
+        url = data.get("url", "").strip()
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        exclude = data.get("exclude", [])
+        max_workers = data.get("max_workers", 6)
+
+        # Run the full parallel audit
+        orch = parallel_orchestrator.ParallelOrchestrator(url=url, max_workers=max_workers)
+        orch.register_all(exclude=exclude or [])
+        orch.run_parallel()
+
+        # Synthesize the comprehensive report
+        report = parallel_orchestrator.synthesize_comprehensive_report(
+            url=url,
+            module_results=orch.results,
+            timings=orch.timings,
+        )
+
+        # Store in session
+        session = _get_session()
+        session["comprehensive_report"] = report
+        session["orchestrator_result"] = orch.synthesize()
+
+        # Save performance snapshot
+        try:
+            site_performance.save_score_snapshot(url, report)
+        except Exception:
+            pass
+
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@require_auth
 @app.route("/api/report/full-audit", methods=["POST"])
 @limiter.limit("5 per minute")
 def api_report_full_audit():
