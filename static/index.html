@@ -4880,7 +4880,7 @@ async function generateArticleStream() {
         'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
         'X-Session-ID': localStorage.getItem('session_id') || 'default',
       },
-      body: JSON.stringify({ topic, keywords: keywords.length ? keywords : [topic], provider, word_count: wordCount, tone, style, language }),
+      body: JSON.stringify({ topic, keywords: keywords.length ? keywords : [topic], provider, word_count: wordCount, tone, style, language, model: typeof getSelectedModel === 'function' ? getSelectedModel() : '' }),
     });
     
     if (!response.ok) throw new Error('Request failed');
@@ -4907,7 +4907,7 @@ async function generateArticleStream() {
           if (event.type === 'chunk') {
             fullText += event.content;
             if (streamEl) {
-              streamEl.innerHTML = renderMarkdown(fullText);
+              streamEl.innerHTML = typeof renderMarkdown === "function" ? renderMarkdown(fullText) : fullText.replace(/</g, "&lt;");
               streamEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
           } else if (event.type === 'error') {
@@ -6959,6 +6959,12 @@ async function deleteUser(username) {
               <option value='anthropic'>Claude</option>
               <option value='gemini'>Gemini</option>
             </select>
+            <select id='chatModel' class='input' style='width:auto;font-size:0.8rem;'>
+              <option value=''>Default Model</option>
+              <option value='gemma4:latest'>Gemma 4</option>
+              <option value='llama3'>Llama 3</option>
+              <option value='qwen2.5'>Qwen 2.5</option>
+            </select>
             <button class='btn btn-secondary btn-sm' onclick='clearChat()' id='chatClearBtn'>
               <i class='fas fa-trash'></i> Clear
             </button>
@@ -6980,6 +6986,7 @@ async function deleteUser(username) {
 
 
 <script src="report.js"></script>
+<script src="utils.js"></script>
 <script src="chat.js"></script>
 </body>
 </html>

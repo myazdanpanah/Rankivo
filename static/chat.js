@@ -36,48 +36,7 @@ function initChat() {
   }
 }
 
-function escH(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-function renderMarkdown(text) {
-  // Simple markdown to HTML conversion
-  let html = escH(text);
-  
-  // Code blocks
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="chat-code"><code>$2</code></pre>');
-  
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code class="chat-inline-code">$1</code>');
-  
-  // Bold
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  
-  // Italic
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  
-  // Headers
-  html = html.replace(/^### (.+)$/gm, '<h4 class="chat-h">$1</h4>');
-  html = html.replace(/^## (.+)$/gm, '<h3 class="chat-h">$1</h3>');
-  html = html.replace(/^# (.+)$/gm, '<h2 class="chat-h">$1</h2>');
-  
-  // Unordered lists
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul class="chat-list">$&</ul>');
-  
-  // Ordered lists
-  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-  
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="chat-link">$1</a>');
-  
-  // Line breaks
-  html = html.replace(/\n/g, '<br>');
-  
-  return html;
-}
+// renderMarkdown, escH, getSelectedProvider, getSelectedModel are in utils.js
 
 function addMessage(role, content) {
   chatMessages.push({ role, content, timestamp: Date.now() });
@@ -148,7 +107,7 @@ async function sendChatMessage() {
         'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
         'X-Session-ID': localStorage.getItem('session_id') || 'default',
       },
-      body: JSON.stringify({ message, provider: getSelectedProvider() }),
+      body: JSON.stringify({ message, provider: getSelectedProvider(), model: getChatModel() }),
     });
     
     if (!response.ok) {
@@ -243,9 +202,24 @@ async function loadChatHistory() {
   } catch (e) {}
 }
 
-function getSelectedProvider() {
-  const el = document.getElementById('chatProvider');
-  return el ? el.value : 'ollama';
+
+async function loadChatModels() {
+  try {
+    const resp = await fetch('/api/article/providers', {
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      // Models are already hardcoded in HTML, but we could dynamically add more
+    }
+  } catch(e) {}
+}
+
+// getSelectedProvider is in utils.js
+
+function getChatModel() {
+  const el = document.getElementById('chatModel');
+  return el ? el.value : '';
 }
 
 // Quick prompts for SEO
