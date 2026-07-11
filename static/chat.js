@@ -203,17 +203,6 @@ async function loadChatHistory() {
 }
 
 
-async function loadChatModels() {
-  try {
-    const resp = await fetch('/api/article/providers', {
-      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      // Models are already hardcoded in HTML, but we could dynamically add more
-    }
-  } catch(e) {}
-}
 
 // getSelectedProvider is in utils.js
 
