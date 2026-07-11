@@ -1290,6 +1290,11 @@ tr:hover td { background: var(--bg-input); }
 .category-header .cat-title i.bg-warning { background: var(--warning-bg); color: var(--warning); }
 .category-header .cat-title i.bg-danger { background: var(--danger-bg); color: var(--danger); }
 
+
+/* AI Chat Styles */
+.chat-messages .chat-msg { margin-bottom: 16px; padding: 12px 16px; border-radius: var(--radius); }
+.chat-msg-user { background: var(--accent-primary); color: #fff; margin-left: 40px; }
+
 </style>
 </head>
 <body>
@@ -1396,6 +1401,10 @@ tr:hover td { background: var(--bg-input); }
     <a class="nav-item" data-page="full-report" onclick="navigate('full-report')">
       <i class="fas fa-chart-pie"></i> <span>Full SEO Report</span>
     </a>
+    <a class='nav-item' data-page='ai-chat' onclick="navigate('ai-chat')">
+      <i class='fas fa-comments'></i> <span>AI Chat</span>
+    </a>
+
 <a class="nav-item" data-page="orchestrator" onclick="navigate('orchestrator')">
       <i class="fas fa-layer-group"></i> <span>Full Audit (Parallel)</span>
     </a>
@@ -1845,7 +1854,7 @@ tr:hover td { background: var(--bg-input); }
           </select>
         </div>
         <div style="display:flex;gap:12px;margin-top:8px;">
-          <button class="btn btn-primary" onclick="generateArticle()" id="btnGenArticle">
+          <button class="btn btn-primary" onclick="generateArticleStream()" id="btnGenArticle">
             <i class="fas fa-pen-fancy"></i> <span data-i18n="generateArticleBtn">Generate Article</span>
           </button>
           <button class="btn btn-secondary" onclick="openClusterSelector()" id="btnLoadClusterTopics" style="display:none;">
@@ -4840,6 +4849,84 @@ function loadClusterTopics() {
   toast('Loaded ' + plan.length + ' cluster topics. First topic: ' + first.pillar_title, 'success');
 }
 
+
+async function generateArticleStream() {
+  const topic = document.getElementById('articleTopic').value.trim();
+  if (!topic) { showToast('Please enter a topic', 'warning'); return; }
+  
+  const keywords = document.getElementById('articleKeywords').value.split('
+').map(k => k.trim()).filter(Boolean);
+  const provider = document.getElementById('articleProvider').value;
+  const wordCount = parseInt(document.getElementById('articleWordCount').value) || 1500;
+  const tone = document.getElementById('articleTone').value;
+  const style = document.getElementById('articleStyle').value;
+  const language = document.getElementById('articleLanguage') ? document.getElementById('articleLanguage').value : 'en';
+  
+  const btn = document.getElementById('btnGenArticle');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  
+  const resultsDiv = document.getElementById('articleResults');
+  const contentDiv = document.getElementById('articleContent');
+  resultsDiv.style.display = 'block';
+  contentDiv.innerHTML = '<div class="chat-msg chat-msg-assistant" style="margin:0;"><div class="chat-msg-content" id="articleStreamContent"><em>Starting generation...</em></div></div>';
+  
+  try {
+    const response = await fetch('/api/article/generate-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
+        'X-Session-ID': localStorage.getItem('session_id') || 'default',
+      },
+      body: JSON.stringify({ topic, keywords: keywords.length ? keywords : [topic], provider, word_count: wordCount, tone, style, language }),
+    });
+    
+    if (!response.ok) throw new Error('Request failed');
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    const streamEl = document.getElementById('articleStreamContent');
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('
+');
+      buffer = lines.pop() || '';
+      
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+          if (event.type === 'chunk') {
+            fullText += event.content;
+            if (streamEl) {
+              streamEl.innerHTML = renderMarkdown(fullText);
+              streamEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+          } else if (event.type === 'error') {
+            if (streamEl) streamEl.innerHTML = '<span style="color:var(--accent-danger)">Error: ' + event.message + '</span>';
+          }
+        } catch (e) {}
+      }
+    }
+    
+    if (streamEl && fullText) {
+      window._lastGeneratedArticle = fullText;
+      showToast('Article generated successfully!', 'success');
+    }
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-pen-fancy"></i> <span data-i18n="generateArticleBtn">Generate Article</span>';
+  }
+}
 async function generateArticle() {
   const topic = document.getElementById('articleTopic').value.trim();
   if (!topic) { toast('Enter a topic', 'error'); return; }
@@ -6857,6 +6944,41 @@ async function deleteUser(username) {
 }
 
 </script>
+    <!-- ==============================================
+         PAGE: AI Chat
+         ============================================== -->
+    <div class='page' id='page-ai-chat'>
+      <div class='card'>
+        <div class='card-header'>
+          <div class='card-title'><i class='fas fa-comments' style='color:#8b5cf6;'></i> Rankivo AI Chat</div>
+          <div class='header-actions'>
+            <select id='chatProvider' class='input' style='width:auto;font-size:0.8rem;'>
+              <option value='ollama'>Ollama (Local)</option>
+              <option value='openai'>OpenAI</option>
+              <option value='anthropic'>Claude</option>
+              <option value='gemini'>Gemini</option>
+            </select>
+            <button class='btn btn-secondary btn-sm' onclick='clearChat()' id='chatClearBtn'>
+              <i class='fas fa-trash'></i> Clear
+            </button>
+          </div>
+        </div>
+        <div class='card-body' style='display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:500px;'>
+          <!-- Messages -->
+          <div id='chatMessages' class='chat-messages' style='flex:1;overflow-y:auto;padding:12px;background:var(--bg-input);border-radius:var(--radius);margin-bottom:12px;'></div>
+          <!-- Input -->
+          <div style='display:flex;gap:8px;align-items:flex-end;'>
+            <textarea id='chatInput' class='input' placeholder='Ask me anything about SEO...' rows='2' style='flex:1;resize:none;'></textarea>
+            <button class='btn btn-primary' onclick='sendChatMessage()' id='chatSendBtn' style='height:48px;min-width:60px;'>
+              <i class='fas fa-paper-plane'></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
 <script src="report.js"></script>
+<script src="chat.js"></script>
 </body>
 </html>

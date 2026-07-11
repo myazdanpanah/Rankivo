@@ -17,7 +17,7 @@ from flask_limiter.util import get_remote_address
 
 from keyword_research import run_keyword_research
 from pillar_cluster import build_pillar_cluster_map
-from content_generator import generate_article, generate_text, get_available_providers
+from content_generator import generate_article, generate_text, generate_text_stream, get_available_providers, build_article_prompt
 from topic_researcher import research_topic
 from seo_audit import audit_url
 from batch_audit import parse_csv_urls, batch_audit, generate_comparison_table, generate_sample_csv
@@ -2486,6 +2486,269 @@ def api_intent_training_delete():
         if len(_intent_training_data[intent]) < before:
             return jsonify({"success": True, "removed": word})
     return jsonify({"error": f"Word '{word}' not found in {intent}"}), 404
+
+
+# ──────────────────────────────────────────────
+# 40. SSE Streaming Article Generation
+# ──────────────────────────────────────────────
+
+@require_auth
+@app.route("/api/article/generate-stream", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_generate_article_stream():
+    """Generate an article with Server-Sent Events streaming."""
+    from flask import Response, stream_with_context
+    import json as _json
+
+    data = request.json or {}
+    topic = data.get("topic", "").strip()
+    keywords = data.get("keywords", [])
+    provider = data.get("provider", DEFAULT_AI_PROVIDER)
+    word_count = data.get("word_count", 1500)
+    tone = data.get("tone", "informative, authoritative")
+    style = data.get("style", "blog post")
+    language = data.get("language", "en")
+
+    if not topic:
+        return jsonify({"error": "Topic is required"}), 400
+    if not keywords:
+        keywords = [topic]
+
+    session = _get_session()
+    kw_data = session.get("keyword_data", {})
+
+    # Step 1: Research the topic (non-streaming)
+    research_data = None
+    try:
+        research_data = research_topic(
+            topic=topic, target_keywords=keywords,
+            language=language, num_results=6,
+        )
+    except Exception:
+        pass
+
+    def generate():
+        try:
+            # Send research status
+            yield _json.dumps({"type": "status", "message": "Research complete. Generating article..."}) + "\n"
+
+            # Build the prompt
+            prompt = content_generator.build_article_prompt(
+                topic=topic, target_keywords=keywords,
+                people_also_ask=kw_data.get("people_also_ask"),
+                serp_context=kw_data.get("serp_results"),
+                research_data=research_data,
+                word_count=word_count, tone=tone, style=style, language=language,
+            )
+
+            system_prompt = (
+                "You are a world-class SEO content writer. You produce well-structured, "
+                "original, keyword-optimized content that ranks well on search engines. "
+                "You always write in Markdown format."
+            )
+
+            # Stream tokens
+            for chunk in generate_text_stream(prompt, provider=provider, system_prompt=system_prompt):
+                yield _json.dumps({"type": "chunk", "content": chunk}) + "\n"
+
+            # Send completion
+            yield _json.dumps({"type": "done", "topic": topic}) + "\n"
+
+        except Exception as e:
+            yield _json.dumps({"type": "error", "message": str(e)}) + "\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# ──────────────────────────────────────────────
+# 41. AI Chat
+# ──────────────────────────────────────────────
+
+
+# In-memory chat history per session
+_chat_history = {}  # session_id -> list of {role, content, timestamp}
+CHAT_MAX_HISTORY = 50
+# Periodic chat history cleanup
+_chat_last_cleanup = time.time()
+_CHAT_CLEANUP_INTERVAL = 300  # 5 minutes
+_CHAT_MAX_MESSAGES = 200  # max messages per session
+
+def _cleanup_chat_history():
+    global _chat_last_cleanup
+    now = time.time()
+    if now - _chat_last_cleanup < _CHAT_CLEANUP_INTERVAL:
+        return
+    _chat_last_cleanup = now
+    stale_sessions = []
+    for sid, msgs in _chat_history.items():
+        if msgs and now - msgs[-1].get('timestamp', 0) > 3600:
+            stale_sessions.append(sid)
+        elif len(msgs) > _CHAT_MAX_MESSAGES:
+            _chat_history[sid] = msgs[-_CHAT_MAX_MESSAGES:]
+    for sid in stale_sessions:
+        _chat_history.pop(sid, None)
+  # max messages to keep in context
+
+CHAT_SYSTEM_PROMPT = """You are Rankivo AI, an expert SEO assistant. You help users with:
+- SEO strategy and planning
+- Keyword research and analysis
+- Content optimization
+- Technical SEO issues
+- Link building
+- Local SEO
+- E-commerce SEO
+- AI/GEO optimization for AI search engines
+- Competitor analysis
+- Analytics and reporting
+
+You have access to the user's current audit data and keyword research from their session.
+Always provide actionable, specific advice. Use bullet points and structure your responses clearly.
+If the user asks about their website, reference their audit data when available.
+Keep responses concise but comprehensive. Use markdown formatting."""
+
+
+@require_auth
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    """Send a message to the AI chat and get a streaming response."""
+    from flask import Response, stream_with_context
+    import json as _json
+
+    data = request.json or {}
+    message = data.get("message", "").strip()
+    provider = data.get("provider", DEFAULT_AI_PROVIDER)
+
+    if not message:
+        return jsonify({"error": "Message is required"}), 400
+
+    _cleanup_chat_history()
+
+    # Get session context
+    session = _get_session()
+    session_id = request.headers.get("X-Session-ID", "default")
+
+    # Build context from session data
+    context_parts = []
+
+    audit_data = session.get("audit_result")
+    if audit_data:
+        score = audit_data.get("score", "N/A")
+        url = audit_data.get("final_url", audit_data.get("url", ""))
+        issues = audit_data.get("issues", [])[:5]
+        issues_text = "\n".join(f"  - [{i.get('severity')}] {i.get('message', '')}" for i in issues)
+        context_parts.append(
+            f"Current audit data for {url}:\n"
+            f"  Score: {score}/100\n"
+            f"  Title: {audit_data.get('page_title', 'N/A')}\n"
+            f"  Word count: {audit_data.get('word_count', 'N/A')}\n"
+            f"  Key issues:\n{issues_text}"
+        )
+
+    kw_data = session.get("keyword_data")
+    if kw_data:
+        seed = kw_data.get("seed", "")
+        suggestions = kw_data.get("suggestions", [])[:10]
+        paa = kw_data.get("people_also_ask", [])[:5]
+        context_parts.append(
+            f"Keyword research for '{seed}':\n"
+            f"  Top suggestions: {', '.join(suggestions[:5])}\n"
+            f"  People also ask: {', '.join(paa)}"
+        )
+
+    comprehensive = session.get("comprehensive_report")
+    if comprehensive:
+        exec_summary = comprehensive.get("executive_summary", "")
+        overall_score = comprehensive.get("overall_score", "N/A")
+        quick_wins = comprehensive.get("quick_wins", [])[:3]
+        qw_text = "\n".join(f"  - {w}" for w in quick_wins)
+        context_parts.append(
+            f"Comprehensive report (overall score: {overall_score}):\n"
+            f"  Summary: {exec_summary[:300]}\n"
+            f"  Quick wins:\n{qw_text}"
+        )
+
+    # Build message history
+    if session_id not in _chat_history:
+        _chat_history[session_id] = []
+    history = _chat_history[session_id]
+
+    # Trim history if too long
+    if len(history) > CHAT_MAX_HISTORY:
+        history = history[-CHAT_MAX_HISTORY:]
+        _chat_history[session_id] = history
+
+    # Build the full prompt
+    context_str = "\n\n".join(context_parts) if context_parts else "No audit data available yet."
+    history_str = "\n".join(
+        f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content']}"
+        for m in history[-10:]  # last 10 messages for context
+    )
+
+    full_prompt = f"""## User Session Context
+{context_str}
+
+## Recent Conversation
+{history_str if history_str else '(New conversation)'}
+
+## Current User Message
+{message}
+
+Respond as Rankivo AI SEO assistant. Be helpful, specific, and actionable."""
+
+    # Store user message
+    history.append({"role": "user", "content": message, "timestamp": time.time()})
+
+    def generate():
+        full_response = ""
+        try:
+            for chunk in generate_text_stream(full_prompt, provider=provider, system_prompt=CHAT_SYSTEM_PROMPT):
+                full_response += chunk
+                yield _json.dumps({"type": "chunk", "content": chunk}) + "\n"
+
+            # Store assistant response
+            history.append({"role": "assistant", "content": full_response, "timestamp": time.time()})
+            _chat_history[session_id] = history
+
+            yield _json.dumps({"type": "done"}) + "\n"
+
+        except Exception as e:
+            yield _json.dumps({"type": "error", "message": str(e)}) + "\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@require_auth
+@app.route("/api/chat/history", methods=["GET"])
+def api_chat_history():
+    """Get chat history for the current session."""
+    session_id = request.headers.get("X-Session-ID", "default")
+    history = _chat_history.get(session_id, [])
+    return jsonify({"history": history[-50:]})  # last 50 messages
+
+
+@require_auth
+@app.route("/api/chat/clear", methods=["POST"])
+def api_chat_clear():
+    """Clear chat history for the current session."""
+    session_id = request.headers.get("X-Session-ID", "default")
+    _chat_history.pop(session_id, None)
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":
