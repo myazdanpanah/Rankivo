@@ -16,7 +16,7 @@ class TestCheckOllama(unittest.TestCase):
 
     def test_check_ollama_returns_false_when_offline(self):
         from config import check_ollama
-        with patch('config.requests.get', side_effect=Exception('Connection refused')):
+        with patch('requests.get', side_effect=Exception('Connection refused')):
             result = check_ollama()
             self.assertFalse(result)
 
@@ -24,7 +24,7 @@ class TestCheckOllama(unittest.TestCase):
         from config import check_ollama
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        with patch('config.requests.get', return_value=mock_resp):
+        with patch('requests.get', return_value=mock_resp):
             # Reset cache
             import config
             config._ollama_check_cache = None
@@ -47,7 +47,7 @@ class TestCheckOllama(unittest.TestCase):
             call_count += 1
             return mock_resp
 
-        with patch('config.requests.get', side_effect=mock_get):
+        with patch('requests.get', side_effect=mock_get):
             result1 = check_ollama()
             self.assertTrue(result1)
             self.assertEqual(call_count, 1)

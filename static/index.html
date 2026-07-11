@@ -3704,6 +3704,7 @@ function navigate(page) {
   const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (pageEl) pageEl.classList.add('active');
   if (navEl) navEl.classList.add('active');
+  if (page === 'ai-chat') initChat();
 
   const titles = {
     en: {
