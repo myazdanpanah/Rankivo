@@ -122,6 +122,17 @@ def _get_session():
     return _session_store[sid]
 
 
+
+@app.before_request
+def _before_request_hook():
+    """Run periodic cleanup on every request."""
+    try:
+        _cleanup_chat_history()
+        _cleanup_expired_tokens()
+    except Exception:
+        pass
+
+
 # ──────────────────────────────────────────────
 # Auth Endpoints
 # ──────────────────────────────────────────────

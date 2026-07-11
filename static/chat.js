@@ -238,3 +238,68 @@ function setChatPrompt(prompt) {
     input.focus();
   }
 }
+
+// Voice Input (Web Speech API)
+let voiceRecognition = null;
+let voiceListening = false;
+
+function toggleVoiceInput() {
+  const btn = document.getElementById('voiceBtn');
+  if (!btn) return;
+  
+  if (voiceListening) {
+    if (voiceRecognition) voiceRecognition.stop();
+    voiceListening = false;
+    btn.innerHTML = '<i class="fas fa-microphone"></i>';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-secondary');
+    return;
+  }
+  
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    if (typeof showToast === 'function') showToast('Speech recognition not supported in this browser', 'warning');
+    return;
+  }
+  
+  voiceRecognition = new SpeechRecognition();
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = true;
+  voiceRecognition.lang = navigator.language || 'en-US';
+  
+  voiceRecognition.onstart = function() {
+    voiceListening = true;
+    btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+    btn.classList.remove('btn-secondary');
+    btn.classList.add('btn-danger');
+  };
+  
+  voiceRecognition.onresult = function(event) {
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    input.value = transcript;
+  };
+  
+  voiceRecognition.onend = function() {
+    voiceListening = false;
+    btn.innerHTML = '<i class="fas fa-microphone"></i>';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-secondary');
+  };
+  
+  voiceRecognition.onerror = function(event) {
+    voiceListening = false;
+    btn.innerHTML = '<i class="fas fa-microphone"></i>';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-secondary');
+    if (event.error !== 'no-speech' && typeof showToast === 'function') {
+      showToast('Voice input error: ' + event.error, 'warning');
+    }
+  };
+  
+  voiceRecognition.start();
+}

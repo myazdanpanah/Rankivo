@@ -6976,6 +6976,9 @@ async function deleteUser(username) {
           <!-- Input -->
           <div style='display:flex;gap:8px;align-items:flex-end;'>
             <textarea id='chatInput' class='input' placeholder='Ask me anything about SEO...' rows='2' style='flex:1;resize:none;'></textarea>
+            <button class='btn btn-secondary' onclick='toggleVoiceInput()' id='voiceBtn' title='Voice input' style='height:48px;min-width:48px;'>
+              <i class='fas fa-microphone'></i>
+            </button>
             <button class='btn btn-primary' onclick='sendChatMessage()' id='chatSendBtn' style='height:48px;min-width:60px;'>
               <i class='fas fa-paper-plane'></i>
             </button>

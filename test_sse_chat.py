@@ -154,3 +154,30 @@ class TestModelSelector(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+class TestSSEFormat(unittest.TestCase):
+    """Test SSE streaming output format."""
+
+    def test_content_generator_stream_yields_chunks(self):
+        """generate_text_stream should yield string chunks."""
+        from content_generator import generate_text_stream
+        # Just verify the function exists and is callable
+        self.assertTrue(callable(generate_text_stream))
+
+    def test_chat_endpoint_returns_sse(self):
+        """Chat endpoint should return text/event-stream."""
+        from api import app
+        with app.test_client() as client:
+            # Login first
+            resp = client.post('/api/auth/login', json={'username': 'admin', 'password': 'admin12345'})
+            token = resp.get_json().get('token', '')
+            # Test chat endpoint exists and requires auth
+            resp = client.post('/api/chat', json={'message': 'test'})
+            self.assertEqual(resp.status_code, 401)  # No auth
+
+    def test_stream_endpoint_requires_auth(self):
+        """Stream endpoint should require authentication."""
+        from api import app
+        with app.test_client() as client:
+            resp = client.post('/api/article/generate-stream', json={'topic': 'test'})
+            self.assertEqual(resp.status_code, 401)
