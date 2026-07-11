@@ -2368,7 +2368,7 @@ def api_report_comprehensive():
 
         # Save performance snapshot
         try:
-            site_performance.save_score_snapshot(url, report)
+            site_performance.save_score_snapshot(url, orch.synthesize())
         except Exception:
             pass
 
