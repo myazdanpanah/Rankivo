@@ -2909,6 +2909,12 @@ tr:hover td { background: var(--bg-input); }
           <div class="form-group" style="flex:2;">
             <label class="form-label">URL to Monitor</label>
             <input type="text" class="form-input" id="perfUrl" placeholder="https://example.com" onkeydown="if(event.key==='Enter') loadPerformanceDashboard()">
+            <select id="monitorRate" class="form-select" style="width:auto;" onchange="setMonitorRate(this.value)">
+              <option value="30000">Refresh: 30s</option>
+              <option value="15000">Refresh: 15s</option>
+              <option value="60000">Refresh: 60s</option>
+              <option value="0">Auto-refresh: Off</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">Period</label>
@@ -4217,6 +4223,7 @@ function renderKwTrendsRelated(relatedData) {
     }
   }
   
+  if (scores.overall_score !== undefined) checkScoreDrop(scores.overall_score);
   container.innerHTML = html;
 }
 
@@ -7001,7 +7008,7 @@ let monitorRefreshRate = 30000;
 function startMonitorAutoRefresh() {
   if (monitorInterval) clearInterval(monitorInterval);
   monitorInterval = setInterval(async () => {
-    const urlInput = document.getElementById('monitorUrl');
+    const urlInput = document.getElementById('perfUrl');
     if (!urlInput || !urlInput.value.trim()) return;
     try {
       const data = await api('/api/performance/dashboard', {
@@ -7044,5 +7051,42 @@ function updateMonitorDisplay(data) {
   container.innerHTML = html;
 }
 </script>
+
+
+function setMonitorRate(ms) {
+  monitorRefreshRate = parseInt(ms) || 30000;
+  if (monitorRefreshRate > 0) {
+    startMonitorAutoRefresh();
+    if (typeof showToast === 'function') showToast('Auto-refresh set to ' + (monitorRefreshRate/1000) + 's', 'info');
+  } else {
+    stopMonitorAutoRefresh();
+    if (typeof showToast === 'function') showToast('Auto-refresh disabled', 'info');
+  }
+}
+
+
+// Score Drop Alerts
+let _lastScore = null;
+function checkScoreDrop(newScore) {
+  if (_lastScore !== null && newScore < _lastScore - 5) {
+    const drop = _lastScore - newScore;
+    if (typeof showToast === 'function') {
+      showToast('Score dropped by ' + drop + ' points! (' + _lastScore + ' -> ' + newScore + ')', 'warning');
+    }
+    if (Notification && Notification.permission === 'granted') {
+      new Notification('Rankivo SEO Alert', {
+        body: 'Score dropped by ' + drop + ' points: ' + _lastScore + ' -> ' + newScore,
+        icon: '/favicon.ico'
+      });
+    }
+  }
+  _lastScore = newScore;
+}
+
+function requestNotificationPermission() {
+  if (Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
 </body>
 </html>

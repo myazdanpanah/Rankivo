@@ -184,3 +184,83 @@ class TestSSEFormat(unittest.TestCase):
             resp = client.post('/api/article/generate-stream', json={})
             # Should return 400 (bad request) for missing topic
             self.assertIn(resp.status_code, [400, 401])
+
+
+class TestChatExport(unittest.TestCase):
+    """Test chat export functions."""
+
+    def test_export_chat_markdown_function_exists(self):
+        """exportChatMarkdown should be defined in chat.js."""
+        with open('static/chat.js', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('function exportChatMarkdown', content)
+
+    def test_export_chat_json_function_exists(self):
+        """exportChatJSON should be defined in chat.js."""
+        with open('static/chat.js', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('function exportChatJSON', content)
+
+    def test_share_chat_link_function_exists(self):
+        """shareChatLink should be defined in chat.js."""
+        with open('static/chat.js', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('function shareChatLink', content)
+
+    def test_export_buttons_in_index(self):
+        """Export buttons should be in index.html."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('exportChatMarkdown', content)
+        self.assertIn('exportChatJSON', content)
+        self.assertIn('shareChatLink', content)
+
+
+class TestMonitoringDashboard(unittest.TestCase):
+    """Test monitoring dashboard functionality."""
+
+    def test_monitor_auto_refresh_exists(self):
+        """startMonitorAutoRefresh should be defined."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('function startMonitorAutoRefresh', content)
+
+    def test_monitor_uses_correct_element_id(self):
+        """Monitor should use perfUrl, not monitorUrl."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertTrue('perfUrl' in content, 'Should use perfUrl')
+
+    def test_monitor_wired_in_navigate(self):
+        """Monitor auto-refresh should be called in navigate()."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('startMonitorAutoRefresh()', content)
+        self.assertIn('stopMonitorAutoRefresh()', content)
+
+    def test_score_drop_alert_exists(self):
+        """checkScoreDrop function should exist."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('function checkScoreDrop', content)
+
+    def test_refresh_rate_selector_exists(self):
+        """Refresh rate selector should exist."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('monitorRate', content)
+        self.assertIn('setMonitorRate', content)
+
+    def test_theme_system_preference_detection(self):
+        """Theme should detect system preference."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('prefers-color-scheme', content)
+
+    def test_utils_js_loaded_before_chat(self):
+        """utils.js should be loaded before chat.js."""
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        utils_pos = content.find('utils.js')
+        chat_pos = content.find('chat.js')
+        self.assertLess(utils_pos, chat_pos)
