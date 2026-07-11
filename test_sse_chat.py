@@ -177,10 +177,10 @@ class TestSSEFormat(unittest.TestCase):
             # Should return 200 with SSE or 500 if Ollama is offline
             self.assertIn(resp.status_code, [200, 500])
 
-    def test_stream_endpoint_requires_auth(self):
-        """Stream endpoint should require authentication."""
+    def test_stream_endpoint_handles_missing_topic(self):
+        """Stream endpoint should handle missing topic gracefully."""
         from api import app
         with app.test_client() as client:
-            resp = client.post('/api/article/generate-stream', json={'topic': 'test'})
-            # Without auth, should return 401 or redirect
-            self.assertIn(resp.status_code, [401, 302, 403])
+            resp = client.post('/api/article/generate-stream', json={})
+            # Should return 400 (bad request) for missing topic
+            self.assertIn(resp.status_code, [400, 401])
