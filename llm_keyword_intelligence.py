@@ -17,31 +17,30 @@ import numpy as np
 from typing import Optional
 from difflib import SequenceMatcher
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import (
     OLLAMA_BASE_URL, OLLAMA_MODEL, REQUEST_TIMEOUT,
     EMBEDDING_MODEL, LLM_INTENT_CLASSIFICATION, SEMANTIC_CLUSTERING,
-    _safe_print, suppress_output,
+    LLM_DIFFICULTY_BLEND_RATIO,
+    _safe_print, suppress_output, check_ollama,
 )
 from keyword_research import classify_intent as _heuristic_intent
 
 
 
 # ──────────────────────────────────────────────
-# Ollama Helpers
+# Ollama Helpers (using shared utility)
 # ──────────────────────────────────────────────
 
 
 def _check_ollama() -> bool:
-    """Check if Ollama is running and accessible."""
-    try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-        return resp.status_code == 200
-    except Exception:
-        return False
+    """Check if Ollama is running — delegates to shared utility."""
+    return check_ollama()
 
 
-def _ollama_generate(prompt: str, system: str = "", model: str = "") -> str:
-    """Call Ollama's generate endpoint."""
+def _ollama_generate(prompt: str, system: str = "", model: str = "", max_retries: int = 2) -> str:
+    """Call Ollama's generate endpoint with retry/backoff."""
     if not model:
         model = OLLAMA_MODEL
     payload = {
@@ -50,36 +49,49 @@ def _ollama_generate(prompt: str, system: str = "", model: str = "") -> str:
         "system": system,
         "stream": False,
     }
-    resp = requests.post(
-        f"{OLLAMA_BASE_URL}/api/generate",
-        json=payload,
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()["response"]
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(
+                f"{OLLAMA_BASE_URL}/api/generate",
+                json=payload,
+                timeout=120,
+            )
+            resp.raise_for_status()
+            return resp.json()["response"]
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries:
+                wait = (attempt + 1) * 1.5  # exponential backoff: 1.5s, 3s
+                _safe_print(f"[llm_intel] Ollama call failed (attempt {attempt + 1}/{max_retries + 1}), retrying in {wait}s...")
+                time.sleep(wait)
+    raise last_error
 
 
+# Thread-safe embedding model cache
+_embedding_lock = threading.Lock()
 _cached_embedding_model: str | None = None
 
 
 def _check_embedding_model() -> str:
-    """Find the best available embedding model. Returns model name or empty string."""
+    """Find the best available embedding model. Thread-safe."""
     global _cached_embedding_model
-    if _cached_embedding_model is not None:
-        return _cached_embedding_model
-    try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
-        if resp.status_code == 200:
-            models = [m["name"] for m in resp.json().get("models", [])]
-            for preferred in [EMBEDDING_MODEL, "nomic-embed-text", "mxbai-embed-large", "all-minilm"]:
-                for m in models:
-                    if preferred in m:
-                        _cached_embedding_model = m
-                        return m
-    except Exception:
-        pass
-    _cached_embedding_model = ""
-    return ""
+    with _embedding_lock:
+        if _cached_embedding_model is not None:
+            return _cached_embedding_model
+        try:
+            resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+            if resp.status_code == 200:
+                models = [m["name"] for m in resp.json().get("models", [])]
+                for preferred in [EMBEDDING_MODEL, "nomic-embed-text", "mxbai-embed-large", "all-minilm"]:
+                    for m in models:
+                        if preferred in m:
+                            _cached_embedding_model = m
+                            return m
+        except Exception:
+            pass
+        _cached_embedding_model = ""
+        return ""
 
 
 def _ollama_embeddings(texts: list[str], model: str = "") -> list[list[float]]:
@@ -206,7 +218,9 @@ def _is_persian(text: str) -> bool:
         arabic_range = range(0xFB50, 0xFDFF + 1)
         extended_arabic = range(0xFE70, 0xFEFF + 1)
         persian_count = sum(1 for c in text if ord(c) in persian_range or ord(c) in arabic_range or ord(c) in extended_arabic)
-        return persian_count > len(text) * 0.3
+        # For short strings (<=3 chars), any Persian char is enough; for longer, require 20%
+        min_ratio = 0.2 if len(text) > 3 else 0.1
+        return persian_count > len(text) * min_ratio
 
 
 def classify_intent_llm(keyword: str, model: str = "") -> str:
@@ -698,7 +712,7 @@ Respond in JSON format ONLY:
                 parsed = json.loads(json_match.group())
                 llm_score = int(parsed.get("score", base_score))
                 # Blend LLM score with signal-based score
-                final_score = int(0.6 * llm_score + 0.4 * base_score)
+                final_score = int(LLM_DIFFICULTY_BLEND_RATIO * llm_score + (1 - LLM_DIFFICULTY_BLEND_RATIO) * base_score)
                 final_score = max(0, min(100, final_score))
 
                 level = parsed.get("level", _score_to_level(final_score))
@@ -833,15 +847,24 @@ def run_intelligent_keyword_analysis(
         _safe_print("[llm_intel] Step 2: Fallback word-overlap clustering (semantic disabled)...")
         results["clusters"] = _fallback_cluster(keywords)
 
-    # Step 3: Keyword Difficulty (sample a subset to avoid excessive API calls)
+    # Step 3: Keyword Difficulty (parallel estimation for speed)
     if estimate_difficulty:
-        _safe_print("[llm_intel] Step 3: Estimating difficulty...")
-        # Sample keywords for difficulty estimation
+        _safe_print("[llm_intel] Step 3: Estimating difficulty (parallel)...")
         sample = keywords[:difficulty_sample_size]
-        for kw in sample:
-            _safe_print(f"[llm_intel] Estimating difficulty for '{kw}'...")
-            results["difficulties"][kw] = estimate_keyword_difficulty_llm(kw, model=model)
-            time.sleep(1)  # Rate limiting
+        
+        def _estimate_one(kw):
+            return kw, estimate_keyword_difficulty_llm(kw, model=model)
+        
+        with ThreadPoolExecutor(max_workers=min(3, len(sample))) as executor:
+            futures = {executor.submit(_estimate_one, kw): kw for kw in sample}
+            for future in as_completed(futures):
+                try:
+                    kw, diff_result = future.result()
+                    results["difficulties"][kw] = diff_result
+                except Exception as e:
+                    _safe_print(f"[llm_intel] Difficulty estimation failed for '{futures[future]}': {e}")
+        
+        _safe_print(f"[llm_intel] Estimated difficulty for {len(results['difficulties'])} keywords")
 
     # Stats
     intent_counts = {}

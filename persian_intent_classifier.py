@@ -9,7 +9,7 @@ import re
 import json
 import time
 import requests
-from config import OLLAMA_BASE_URL, _safe_print
+from config import OLLAMA_BASE_URL, _safe_print, check_ollama
 
 
 # ──────────────────────────────────────────────
@@ -318,12 +318,7 @@ def classify_persian_intent_llm(keyword: str, model: str = "") -> dict:
         return heuristic_result
     
     # Try LLM for ambiguous cases
-    try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-        if resp.status_code != 200:
-            heuristic_result["method"] = "heuristic"
-            return heuristic_result
-    except Exception:
+    if not check_ollama():
         heuristic_result["method"] = "heuristic"
         return heuristic_result
     
@@ -387,17 +382,17 @@ def classify_persian_intents_batch(keywords: list[str], model: str = "") -> dict
     
     # Classify ambiguous ones via LLM if available
     if ambiguous:
-        try:
-            resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-            if resp.status_code == 200:
+        if check_ollama():
+            try:
                 for kw in ambiguous:
                     result = classify_persian_intent_llm(kw, model=model)
                     results[kw] = result["intent"]
                     time.sleep(0.3)
-            else:
+            except Exception:
                 for kw in ambiguous:
-                    results[kw] = classify_persian_intent_heuristic(kw)["intent"]
-        except Exception:
+                    if kw not in results:
+                        results[kw] = classify_persian_intent_heuristic(kw)["intent"]
+        else:
             for kw in ambiguous:
                 results[kw] = classify_persian_intent_heuristic(kw)["intent"]
     
@@ -505,12 +500,7 @@ def get_persian_classifier_status() -> dict:
     heuristic_ok = test_result["intent"] == "transactional"
     
     # Test LLM
-    llm_ok = False
-    try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-        llm_ok = resp.status_code == 200
-    except Exception:
-        pass
+    llm_ok = check_ollama()
     
     # Count patterns
     total_patterns = sum(

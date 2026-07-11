@@ -2,6 +2,7 @@
 SEO AI Tools - AI Content Generator
 Pluggable backend: Ollama (local), OpenAI, Anthropic Claude, Google Gemini.
 """
+import time
 import requests
 from config import (
     OLLAMA_BASE_URL,
@@ -15,7 +16,31 @@ from config import (
     DEFAULT_ARTICLE_WORD_COUNT,
     DEFAULT_ARTICLE_TONE,
     DEFAULT_ARTICLE_STYLE,
+    check_ollama,
+    LLM_MAX_RETRIES,
+    LLM_RETRY_BASE_DELAY,
+    _safe_print,
 )
+
+
+# ──────────────────────────────────────────────
+# Retry helper
+# ──────────────────────────────────────────────
+
+def _retry_call(func, *args, max_retries=None, **kwargs):
+    """Call func with exponential backoff retry."""
+    retries = max_retries if max_retries is not None else LLM_MAX_RETRIES
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            last_err = e
+            if attempt < retries:
+                delay = LLM_RETRY_BASE_DELAY * (2 ** attempt)
+                _safe_print(f"[content_generator] Retry {attempt+1}/{retries} after {delay:.1f}s: {e}")
+                time.sleep(delay)
+    raise last_err
 
 
 # ──────────────────────────────────────────────
@@ -33,6 +58,29 @@ def _call_ollama(user_prompt: str, system_prompt: str = "") -> str:
     resp = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=120)
     resp.raise_for_status()
     return resp.json()["response"]
+
+
+def _call_ollama_stream(user_prompt: str, system_prompt: str = "", model: str = ""):
+    """Stream Ollama response chunk by chunk. Yields text chunks."""
+    if not model:
+        model = OLLAMA_MODEL
+    payload = {
+        "model": model,
+        "prompt": user_prompt,
+        "system": system_prompt,
+        "stream": True,
+    }
+    resp = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=180, stream=True)
+    resp.raise_for_status()
+    for line in resp.iter_lines():
+        if line:
+            try:
+                import json
+                chunk = json.loads(line)
+                if chunk.get("response"):
+                    yield chunk["response"]
+            except Exception:
+                pass
 
 
 def _call_openai(user_prompt: str, system_prompt: str = "") -> str:
@@ -84,7 +132,7 @@ PROVIDERS = {
 def get_available_providers() -> list[str]:
     """Return list of providers that have credentials configured."""
     available = []
-    if _check_ollama():
+    if check_ollama():
         available.append("ollama")
     if OPENAI_API_KEY:
         available.append("openai")
@@ -95,20 +143,25 @@ def get_available_providers() -> list[str]:
     return available
 
 
-def _check_ollama() -> bool:
-    try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-        return resp.status_code == 200
-    except Exception:
-        return False
-
-
 def generate_text(user_prompt: str, provider: str = "ollama", system_prompt: str = "") -> str:
-    """Call the chosen AI provider."""
+    """Call the chosen AI provider with retry logic."""
     func = PROVIDERS.get(provider)
     if not func:
         raise ValueError(f"Unknown provider: {provider}. Available: {list(PROVIDERS.keys())}")
-    return func(user_prompt, system_prompt)
+    return _retry_call(func, user_prompt, system_prompt)
+
+
+def generate_text_stream(user_prompt: str, provider: str = "ollama", system_prompt: str = "", model: str = ""):
+    """Stream text from LLM. Yields chunks for Ollama, falls back to non-streaming for others."""
+    if provider == "ollama":
+        for chunk in _call_ollama_stream(user_prompt, system_prompt, model=model):
+            yield chunk
+    else:
+        # Non-streaming providers: yield full response as single chunk
+        func = PROVIDERS.get(provider)
+        if func:
+            result = _retry_call(func, user_prompt, system_prompt)
+            yield result
 
 
 # ──────────────────────────────────────────────
@@ -185,10 +238,6 @@ def build_article_prompt(
     # ── People Also Ask ──
     paa_section = ""
     all_paa = list(people_also_ask or [])
-    # Also use PAA from research data
-    if research_data:
-        # PAA might be in search results snippets
-        pass
     if all_paa:
         questions = "\n".join(f"  - {q}" for q in all_paa[:12])
         paa_section = f"\n## People Also Ask (answer ALL of these in your article):\n{questions}\n"
@@ -308,12 +357,9 @@ def generate_article(
 
     if language == "fa":
         system_prompt = (
-            "شما یک نویسنده محتوای سئوی حرفه‌ای هستید. شما محتوای ساختاریافته، "
-            "اصیل و بهینه‌شده برای موتورهای جستجو تولید می‌کنید. "
-            "همیشه به زبان فارسی و در قالب مارک‌داون می‌نویسید. "
-            "تمامی عناوین (H1, H2, H3)، متا توضیحات، متا عنوان، بخش FAQ، "
-            "متن محتوا، متن جایگزین تصاویر، و schema markup باید به زبان فارسی باشند. "
-            "فقط URL slug باید به انگلیسی (حروف لاتین) باشد."
+            "\u0634\u0645\u0627 \u06cc\u06a9 \u0646\u0648\u06cc\u0633\u0646\u062f\u0647 \u0645\u062d\u062a\u0648\u0627\u06cc \u0633\u0626\u0648\u06cc \u062d\u0631\u0641\u0647\u200c\u0627\u06cc \u0647\u0633\u062a\u06cc\u062f. \u0634\u0645\u0627 \u0645\u062d\u062a\u0648\u0627\u06cc \u0633\u0627\u062e\u062a\u0627\u0631\u06cc\u0627\u0641\u062a\u0647, \u0627\u0635\u06cc\u0644 \u0648 \u0628\u0647\u06cc\u0646\u0647\u200c\u0634\u062f\u0647 \u0628\u0631\u0627\u06cc \u0645\u0648\u062a\u0648\u0631\u0647\u0627\u06cc \u062c\u0633\u062a\u062c\u0648 \u062a\u0648\u0644\u06cc\u062f \u0645\u06cc\u200c\u06a9\u0646\u06cc\u062f. "
+            "\u0647\u0645\u06cc\u0634\u0647 \u0628\u0647 \u0632\u0628\u0627\u0646 \u0641\u0627\u0631\u0633\u06cc \u0648 \u062f\u0631 \u0642\u0627\u0644\u0628 \u0645\u0627\u0631\u06a9\u200c\u062f\u0627\u0646 \u0645\u06cc\u200c\u0646\u0648\u06cc\u0633\u06cc\u062f. "
+            "\u062a\u0645\u0627\u0645\u06cc \u0639\u0646\u0627\u0648\u06cc\u0646 (\u0647\u0631 H1, H2, H3), \u0645\u062a\u0627 \u062a\u0648\u0636\u06cc\u062d\u0627\u062a, \u0645\u062a\u0627 \u0639\u0646\u0648\u0627\u0646, \u0628\u062e\u0634 FAQ, \u0645\u062a\u0646 \u0645\u062d\u062a\u0648\u0627, \u0645\u062a\u0646 \u062c\u0627\u06cc\u06af\u0632\u06cc\u0646 \u062a\u0635\u0627\u0648\u06cc\u0631, \u0648 schema markup \u0628\u0627\u06cc\u062f \u0628\u0647 \u0632\u0628\u0627\u0646 \u0641\u0627\u0631\u0633\u06cc \u0628\u0627\u0634\u0646\u062f. \u0641\u0642\u0637 URL slug \u0628\u0627\u06cc\u062f \u0628\u0647 \u0627\u0646\u06af\u0644\u06cc\u0633\u06cc (\u062d\u0631\u0648\u0641 \u0644\u0627\u062a\u06cc\u0646) \u0628\u0627\u0634\u062f."
         )
     else:
         system_prompt = (

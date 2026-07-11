@@ -4,6 +4,7 @@ Central config for API keys, model defaults, and settings.
 """
 import os
 import sys
+import threading
 
 # --- AI Provider Settings ---
 # Set your API keys via environment variables or in a .env file
@@ -12,8 +13,7 @@ import sys
 
 # --- Default Provider ---
 # The new preferred local LLM stack provider (Ollama)
-DEFAULT_PROVIDER = "ollama" 
-DEFAULT_MODEL = "gemma4:latest"
+DEFAULT_PROVIDER = "ollama"
 
 # Overwrite or set default models
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -85,7 +85,7 @@ DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "en")
 # Supported languages: en (English), fa (Persian/Farsi)
 SUPPORTED_LANGUAGES = {
     "en": "English",
-    "fa": "فارسی (Persian)",
+    "fa": "\u0641\u0627\u0631\u0633\u06cc (Persian)",
 }
 
 # --- Serper API Settings (Optional — for enhanced keyword difficulty) ---
@@ -101,6 +101,13 @@ DIFFICULTY_SAMPLE_SIZE = int(os.getenv("DIFFICULTY_SAMPLE_SIZE", "5"))
 LLM_INTENT_CLASSIFICATION = os.getenv("LLM_INTENT_CLASSIFICATION", "1") == "1"
 # Use semantic embeddings for clustering (set to "0" to use word-overlap fallback)
 SEMANTIC_CLUSTERING = os.getenv("SEMANTIC_CLUSTERING", "1") == "1"
+# Blend ratio for LLM difficulty vs signal-based difficulty (0.0-1.0)
+# Higher = more weight on LLM analysis, lower = more weight on domain signals
+LLM_DIFFICULTY_BLEND_RATIO = float(os.getenv("LLM_DIFFICULTY_BLEND_RATIO", "0.6"))
+# Max retries for LLM API calls
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "2"))
+# Base delay (seconds) between retries (exponential backoff)
+LLM_RETRY_BASE_DELAY = float(os.getenv("LLM_RETRY_BASE_DELAY", "1.0"))
 
 # --- Auth Settings ---
 # Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to enable login protection.
@@ -112,6 +119,35 @@ SECRET_KEY = os.getenv("SECRET_KEY", "rankivo-change-me-in-production")
 # ──────────────────────────────────────────────
 # Shared Utilities
 # ──────────────────────────────────────────────
+
+# Thread-safe Ollama availability cache
+_ollama_check_lock = threading.Lock()
+_ollama_check_cache: bool | None = None
+_ollama_check_cache_time: float = 0.0
+_OLLAMA_CHECK_TTL = 5.0  # seconds
+
+
+def check_ollama() -> bool:
+    """Check if Ollama is running and accessible. Cached for 5s to avoid hammering."""
+    global _ollama_check_cache, _ollama_check_cache_time
+    import time
+    import requests as _req
+
+    now = time.time()
+    with _ollama_check_lock:
+        if _ollama_check_cache is not None and (now - _ollama_check_cache_time) < _OLLAMA_CHECK_TTL:
+            return _ollama_check_cache
+
+    try:
+        resp = _req.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        result = resp.status_code == 200
+    except Exception:
+        result = False
+
+    with _ollama_check_lock:
+        _ollama_check_cache = result
+        _ollama_check_cache_time = time.time()
+    return result
 
 
 def _safe_print(msg):
@@ -150,9 +186,9 @@ class suppress_output:
         sys.stdout = self._orig_stdout
         sys.stderr = self._orig_stderr
 
+
 import random as _random
 
 def random_ua() -> str:
     """Return a random User-Agent string from the shared pool."""
     return _random.choice(USER_AGENTS)
-

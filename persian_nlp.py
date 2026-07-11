@@ -158,7 +158,9 @@ def is_persian_text(text: str) -> bool:
         1 for c in text
         if ord(c) in persian_range or ord(c) in arabic_range or ord(c) in extended_arabic
     )
-    return persian_count > len(text) * 0.3
+    # For short strings (<=3 chars), any Persian char is enough; for longer, require 20%
+    min_ratio = 0.2 if len(text) > 3 else 0.1
+    return persian_count > len(text) * min_ratio
 
 
 def get_nlp_status() -> dict:
