@@ -3711,7 +3711,7 @@ function navigate(page) {
   if (pageEl) pageEl.classList.add('active');
   if (navEl) navEl.classList.add('active');
   if (page === 'ai-chat') initChat();
-  if (page === 'performance') startMonitorAutoRefresh(); else stopMonitorAutoRefresh();
+  if (page === 'performance') { startMonitorAutoRefresh(); if (typeof requestNotificationPermission === 'function') requestNotificationPermission(); } else stopMonitorAutoRefresh();
 
   const titles = {
     en: {
@@ -7022,6 +7022,7 @@ function startMonitorAutoRefresh() {
 
 function stopMonitorAutoRefresh() {
   if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
+  _lastScore = null;
 }
 
 function updateMonitorDisplay(data) {
